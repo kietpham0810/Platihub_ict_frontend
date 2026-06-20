@@ -47,6 +47,7 @@ export const API_CONFIG = {
     TIMEOUT: Number(import.meta.env.VITE_TIMEOUT_MS) || 5000,
     ENDPOINTS: {
         GET_PRODUCTS: '/get_products.php',
+        GET_PRODUCT_DETAIL: '/get_product_detail.php',
         ADD_PRODUCT: '/add_product.php',
         UPDATE_PRODUCT: '/update_product.php',
         DELETE_PRODUCT: '/delete_product.php',

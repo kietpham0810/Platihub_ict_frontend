@@ -7,7 +7,9 @@ import Footer from './components/layout/Footer';
 import Promotion from './components/sections/Promotion';
 import Contact from './components/sections/Contact';
 import AdminProduct from './components/admin/AdminProduct';
-import Products from './components/pages/Products'; // 1. Import trang Products
+import Products from './components/pages/Products';
+// Thêm Import cho trang Chi tiết sản phẩm
+import ProductDetail from './components/pages/ProductDetail'; 
 
 function HomePage() {
   return (
@@ -32,8 +34,10 @@ export default function App() {
               <Route path="/khuyen-mai" element={<Promotion />} />
               <Route path="/lien-he" element={<Contact />} />
               
-              {/* 2. Tuyến đường cho trang Sản phẩm (Khách hàng) */}
               <Route path="/san-pham" element={<Products />} />
+              
+              {/* Route bóc tách tham số ID từ URL */}
+              <Route path="/product/:id" element={<ProductDetail />} />
               
               <Route path="/admin" element={<AdminProduct />} />
             </Routes>
