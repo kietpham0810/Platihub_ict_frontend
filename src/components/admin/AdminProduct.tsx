@@ -30,10 +30,9 @@ export default function AdminProduct() {
     product_name: '', manufacturer: '', product_type: '', image_url: '', description: ''
   });
   
-  // ================= 🌟 UPDATE: STATES QUẢN LÝ UPLOAD ẢNH =================
+  // States quản lý Upload ảnh
   const [imageInputMode, setImageInputMode] = useState<'url' | 'upload'>('url');
   const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
-  
   const [specs, setSpecs] = useState<SpecField[]>([]);
 
   // ================= STATES CHO MODAL UPDATE =================
@@ -43,6 +42,12 @@ export default function AdminProduct() {
     product_name: '', manufacturer: '', product_type: '', image_url: '', description: ''
   });
   const [editSpecs, setEditSpecs] = useState<SpecField[]>([]);
+
+  // ================= 🌟 NEW: STATE CHO CUSTOM CONFIRM MODAL =================
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    type: 'approve' | 'delete' | null;
+  }>({ isOpen: false, type: null });
 
   // ================= 1. HÀM FETCH =================
   const fetchPendingProducts = async () => {
@@ -68,12 +73,11 @@ export default function AdminProduct() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
 
-  // ================= 🌟 UPDATE: THUẬT TOÁN UPLOAD ẢNH LÊN IMGUR =================
+  // ================= THUẬT TOÁN UPLOAD ẢNH LÊN IMGUR =================
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Kiểm tra định dạng file
     if (!file.type.startsWith('image/')) {
       alert('Vui lòng chọn một file hình ảnh hợp lệ (JPG, PNG, WEBP...)');
       return;
@@ -84,9 +88,6 @@ export default function AdminProduct() {
     imgData.append('image', file);
 
     try {
-      // Gọi API ẩn danh của Imgur
-      // Lưu ý: Client-ID này là mã Public dùng chung. 
-      // Nếu dùng thật lâu dài, cậu nên đăng ký 1 Client ID miễn phí tại api.imgur.com
       const response = await fetch('https://api.imgur.com/3/image', {
         method: 'POST',
         headers: {
@@ -97,7 +98,6 @@ export default function AdminProduct() {
 
       const data = await response.json();
       if (data.success) {
-        // Nhận link ảnh trả về và gán thẳng vào formData
         setFormData({ ...formData, image_url: data.data.link });
       } else {
         alert('Lỗi tải ảnh lên Cloud: ' + (data.data?.error || 'Unknown error'));
@@ -107,12 +107,11 @@ export default function AdminProduct() {
       alert('Không thể kết nối đến máy chủ lưu trữ ảnh.');
     } finally {
       setIsUploadingImage(false);
-      // Reset input file để có thể chọn lại chính file đó nếu cần
       e.target.value = '';
     }
   };
 
-  // ================= 2. QUẢN LÝ SPECIFICATIONS (MANUAL) =================
+  // ================= QUẢN LÝ SPECIFICATIONS =================
   const addSpecField = () => setSpecs([...specs, { key: '', value: '' }]);
   const removeSpecField = (index: number) => setSpecs(specs.filter((_, i) => i !== index));
   const handleSpecChange = (index: number, field: 'key' | 'value', value: string) => {
@@ -121,7 +120,6 @@ export default function AdminProduct() {
     setSpecs(newSpecs);
   };
 
-  // ================= 3. QUẢN LÝ SPECIFICATIONS (EDIT MODAL) =================
   const addEditSpecField = () => setEditSpecs([...editSpecs, { key: '', value: '' }]);
   const removeEditSpecField = (index: number) => setEditSpecs(editSpecs.filter((_, i) => i !== index));
   const handleEditSpecChange = (index: number, field: 'key' | 'value', value: string) => {
@@ -130,7 +128,7 @@ export default function AdminProduct() {
     setEditSpecs(newSpecs);
   };
 
-  // ================= 4. LUỒNG SỬA SẢN PHẨM =================
+  // ================= LUỒNG SỬA SẢN PHẨM =================
   const openEditModal = (product: Product) => {
     setEditingProduct(product);
     setEditFormData({
@@ -194,43 +192,50 @@ export default function AdminProduct() {
     }
   };
 
-  // ================= 5. DUYỆT / XÓA / THÊM MỚI =================
-  const handleApprove = async () => {
-    if (!window.confirm(`Bạn muốn duyệt hiển thị ${selectedIds.length} sản phẩm này?`)) return;
-    try {
-      await Promise.all(selectedIds.map(id => 
-        fetch(buildApiUrl(API_CONFIG.ENDPOINTS.APPROVE_PRODUCT), {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id })
-        })
-      ));
-      alert('Đã duyệt sản phẩm thành công!');
-      setSelectedIds([]);
-      fetchPendingProducts();
-    } catch (error) {
-      alert('Có lỗi xảy ra khi duyệt sản phẩm.');
-    }
-  };
+  // ================= 🌟 NEW: HÀM THỰC THI HÀNH ĐỘNG HÀNG LOẠT (DUYỆT/XÓA) CẢI TIẾN =================
+  const executeConfirmAction = async () => {
+    if (!confirmDialog.type) return;
+    
+    const isApprove = confirmDialog.type === 'approve';
+    // Đảm bảo API_CONFIG.ENDPOINTS.APPROVE_PRODUCT và DELETE_PRODUCT đã được cấu hình trong config.ts
+    const endpoint = isApprove ? API_CONFIG.ENDPOINTS.APPROVE_PRODUCT : API_CONFIG.ENDPOINTS.DELETE_PRODUCT;
 
-  const handleDelete = async () => {
-    if (!window.confirm(`Xóa vĩnh viễn ${selectedIds.length} sản phẩm này khỏi hệ thống?`)) return;
     try {
-      await Promise.all(selectedIds.map(id => 
-        fetch(buildApiUrl(API_CONFIG.ENDPOINTS.DELETE_PRODUCT), {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id })
-        })
-      ));
-      alert('Đã xóa thành công!');
-      setSelectedIds([]);
-      fetchPendingProducts();
+      // Gửi request cho từng ID và bắt lỗi chi tiết từng cái
+      const results = await Promise.all(selectedIds.map(async (id) => {
+        const response = await fetch(buildApiUrl(endpoint), {
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ id })
+        });
+        
+        // Bắt chính xác lỗi HTTP (404, 500...)
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+      }));
+
+      // Kiểm tra xem có sản phẩm nào bị lỗi logic từ Backend không
+      const errorResult = results.find(r => r.status === 'error');
+      if (errorResult) {
+        alert(`Máy chủ từ chối xử lý: ${errorResult.message}`);
+      } else {
+        // Tùy chọn: Thay thế alert này bằng một Toast Notification sau này nếu muốn UI đẹp hơn nữa
+        // alert(isApprove ? 'Đã duyệt sản phẩm thành công!' : 'Đã xóa sản phẩm thành công!');
+        setSelectedIds([]);
+        fetchPendingProducts();
+      }
     } catch (error) {
-      alert('Có lỗi xảy ra khi xóa sản phẩm.');
+      console.error("Critical Fetch Error:", error);
+      alert(`Lỗi Mạng hoặc API không tồn tại (${endpoint}). Vui lòng bấm F12 xem tab Network!`);
+    } finally {
+      // Đóng modal sau khi xử lý xong
+      setConfirmDialog({ isOpen: false, type: null });
     }
   };
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Fix lỗi UX: Bấm submit mà URL đang tải chưa xong hoặc trống
     if (!formData.image_url) {
       alert("Vui lòng cung cấp URL Hình ảnh hoặc chờ ảnh tải lên hoàn tất!");
       return;
@@ -252,7 +257,7 @@ export default function AdminProduct() {
         alert('Đã xuất bản sản phẩm thành công!');
         setFormData({ product_name: '', manufacturer: '', product_type: '', image_url: '', description: '' });
         setSpecs([]);
-        setImageInputMode('url'); // Reset về tab URL
+        setImageInputMode('url'); 
       } else {
         alert(`Lỗi: ${result.message}`);
       }
@@ -284,8 +289,13 @@ export default function AdminProduct() {
                 <h3 className="text-xl font-bold text-gray-800">Sản phẩm chờ duyệt ({pendingProducts.length})</h3>
                 {selectedIds.length > 0 && (
                   <div className="flex gap-3">
-                    <button onClick={handleDelete} className="bg-red-100 text-red-700 hover:bg-red-200 px-4 py-2 rounded font-bold transition-colors">Xóa bỏ ({selectedIds.length})</button>
-                    <button onClick={handleApprove} className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded font-bold transition-colors shadow-sm">Duyệt & Đăng bài ({selectedIds.length})</button>
+                    {/* TRIGGER CUSTOM MODALS */}
+                    <button onClick={() => setConfirmDialog({ isOpen: true, type: 'delete' })} className="bg-red-100 text-red-700 hover:bg-red-200 px-4 py-2 rounded font-bold transition-colors">
+                      Xóa bỏ ({selectedIds.length})
+                    </button>
+                    <button onClick={() => setConfirmDialog({ isOpen: true, type: 'approve' })} className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded font-bold transition-colors shadow-sm">
+                      Duyệt & Đăng bài ({selectedIds.length})
+                    </button>
                   </div>
                 )}
               </div>
@@ -363,7 +373,6 @@ export default function AdminProduct() {
                   </select>
                 </div>
                 
-                {/* ================= 🌟 UPDATE: KHỐI CHỌN NHẬP URL HOẶC UPLOAD ẢNH ================= */}
                 <div className="flex flex-col">
                   <div className="flex justify-between items-center mb-2">
                     <label className="text-sm font-bold text-gray-700">Hình ảnh sản phẩm *</label>
@@ -425,7 +434,6 @@ export default function AdminProduct() {
                 <textarea rows={4} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522] resize-y"></textarea>
               </div>
 
-              {/* JSON DYNAMIC */}
               <div className="border border-gray-200 rounded-lg p-5 bg-gray-50">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-bold text-gray-800">Thông số kỹ thuật (Tùy chọn)</h4>
@@ -454,6 +462,40 @@ export default function AdminProduct() {
             </form>
           )}
         </div>
+
+        {/* ================= 🌟 NEW: MODAL UI XÁC NHẬN CHUYÊN NGHIỆP ================= */}
+        {confirmDialog.isOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 transform transition-all">
+              <div className="flex flex-col items-center text-center">
+                {/* ICON DYNAMIC DỰA THEO HÀNH ĐỘNG */}
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${confirmDialog.type === 'approve' ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'}`}>
+                  {confirmDialog.type === 'approve' ? (
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  ) : (
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  )}
+                </div>
+                
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  {confirmDialog.type === 'approve' ? 'Xác nhận Duyệt bài' : 'Xác nhận Xóa dữ liệu'}
+                </h3>
+                <p className="text-gray-500 mb-8 text-sm">
+                  Bạn có chắc chắn muốn {confirmDialog.type === 'approve' ? 'duyệt hiển thị' : 'xóa vĩnh viễn'} <strong className="text-gray-900 text-lg">{selectedIds.length}</strong> sản phẩm đã chọn? Thao tác này không thể hoàn tác.
+                </p>
+                
+                <div className="flex w-full gap-3">
+                  <button onClick={() => setConfirmDialog({ isOpen: false, type: null })} className="flex-1 py-2.5 rounded-lg font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">
+                    Hủy bỏ
+                  </button>
+                  <button onClick={executeConfirmAction} className={`flex-1 py-2.5 rounded-lg font-bold text-white transition-colors ${confirmDialog.type === 'approve' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700 shadow-md'}`}>
+                    Đồng ý {confirmDialog.type === 'approve' ? 'Duyệt' : 'Xóa'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* MODAL CẬP NHẬT SẢN PHẨM */}
         {isUpdateModalOpen && editingProduct && (
