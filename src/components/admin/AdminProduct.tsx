@@ -20,22 +20,23 @@ interface SpecField {
 }
 
 export default function AdminProduct() {
-  const [activeTab, setActiveTab] = useState<'review' | 'manual'>('review');
+  // 🌟 ĐÃ THÊM TAB 'manage' ĐỂ QUẢN LÝ SẢN PHẨM ĐÃ DUYỆT
+  const [activeTab, setActiveTab] = useState<'review' | 'manual' | 'manage'>('review');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  
+  // States chứa dữ liệu 2 luồng
   const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
+  const [approvedProducts, setApprovedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // States cho Thêm thủ công (Manual Tab)
   const [formData, setFormData] = useState({
     product_name: '', manufacturer: '', product_type: '', image_url: '', description: ''
   });
   
-  // States quản lý Upload ảnh
   const [imageInputMode, setImageInputMode] = useState<'url' | 'upload'>('url');
   const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
   const [specs, setSpecs] = useState<SpecField[]>([]);
 
-  // ================= STATES CHO MODAL UPDATE =================
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState<boolean>(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editFormData, setEditFormData] = useState({
@@ -43,21 +44,26 @@ export default function AdminProduct() {
   });
   const [editSpecs, setEditSpecs] = useState<SpecField[]>([]);
 
-  // ================= 🌟 NEW: STATE CHO CUSTOM CONFIRM MODAL =================
+  // 🌟 MỞ RỘNG LOẠI HÀNH ĐỘNG CHO MODAL XÁC NHẬN: Thêm 'hide'
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
-    type: 'approve' | 'delete' | null;
+    type: 'approve' | 'delete' | 'hide' | null;
   }>({ isOpen: false, type: null });
 
-  // ================= 1. HÀM FETCH =================
-  const fetchPendingProducts = async () => {
+  // ================= 1. HÀM FETCH KÉP =================
+  const fetchProducts = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${buildApiUrl(API_CONFIG.ENDPOINTS.GET_PRODUCTS)}?status=pending`);
-      const data = await response.json();
-      if (data.status === 'success') {
-        setPendingProducts(data.data);
-      }
+      const [pendingRes, approvedRes] = await Promise.all([
+        fetch(`${buildApiUrl(API_CONFIG.ENDPOINTS.GET_PRODUCTS)}?status=pending`),
+        fetch(`${buildApiUrl(API_CONFIG.ENDPOINTS.GET_PRODUCTS)}?status=approved`)
+      ]);
+      
+      const pendingData = await pendingRes.json();
+      const approvedData = await approvedRes.json();
+
+      if (pendingData.status === 'success') setPendingProducts(pendingData.data);
+      if (approvedData.status === 'success') setApprovedProducts(approvedData.data);
     } catch (error) {
       console.error("Lỗi khi tải sản phẩm:", error);
     } finally {
@@ -66,14 +72,19 @@ export default function AdminProduct() {
   };
 
   useEffect(() => {
-    fetchPendingProducts();
+    fetchProducts();
   }, []);
+
+  // Xóa danh sách chọn mỗi khi chuyển tab
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [activeTab]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
 
-  // ================= THUẬT TOÁN UPLOAD ẢNH LÊN IMGUR =================
+  // ================= THUẬT TOÁN UPLOAD =================
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -90,9 +101,7 @@ export default function AdminProduct() {
     try {
       const response = await fetch('https://api.imgur.com/3/image', {
         method: 'POST',
-        headers: {
-          Authorization: 'Client-ID 139e72807f61c3c', 
-        },
+        headers: { Authorization: 'Client-ID 139e72807f61c3c' },
         body: imgData,
       });
 
@@ -144,9 +153,7 @@ export default function AdminProduct() {
       try {
         const specsObj = typeof product.specifications === 'string' ? JSON.parse(product.specifications) : product.specifications;
         parsedSpecs = Object.keys(specsObj).map(key => ({ key, value: specsObj[key] }));
-      } catch (e) {
-        console.error("Lỗi parse specifications", e);
-      }
+      } catch (e) {}
     }
     setEditSpecs(parsedSpecs);
     setIsUpdateModalOpen(true);
@@ -174,16 +181,13 @@ export default function AdminProduct() {
 
     try {
       const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.UPDATE_PRODUCT), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       const result = await response.json();
 
       if (result.status === 'success') {
-        alert('Cập nhật sản phẩm thành công!');
         closeEditModal();
-        fetchPendingProducts(); 
+        fetchProducts(); // Cập nhật lại cả 2 bảng
       } else {
         alert(`Lỗi: ${result.message}`);
       }
@@ -192,50 +196,41 @@ export default function AdminProduct() {
     }
   };
 
-  // ================= 🌟 NEW: HÀM THỰC THI HÀNH ĐỘNG HÀNG LOẠT (DUYỆT/XÓA) CẢI TIẾN =================
+  // ================= ĐỘNG CƠ THỰC THI (DUYỆT / XÓA / ẨN) =================
   const executeConfirmAction = async () => {
     if (!confirmDialog.type) return;
     
-    const isApprove = confirmDialog.type === 'approve';
-    // Đảm bảo API_CONFIG.ENDPOINTS.APPROVE_PRODUCT và DELETE_PRODUCT đã được cấu hình trong config.ts
-    const endpoint = isApprove ? API_CONFIG.ENDPOINTS.APPROVE_PRODUCT : API_CONFIG.ENDPOINTS.DELETE_PRODUCT;
+    let endpoint = '';
+    if (confirmDialog.type === 'approve') endpoint = API_CONFIG.ENDPOINTS.APPROVE_PRODUCT;
+    else if (confirmDialog.type === 'delete') endpoint = API_CONFIG.ENDPOINTS.DELETE_PRODUCT;
+    else if (confirmDialog.type === 'hide') endpoint = API_CONFIG.ENDPOINTS.HIDE_PRODUCT;
 
     try {
-      // Gửi request cho từng ID và bắt lỗi chi tiết từng cái
       const results = await Promise.all(selectedIds.map(async (id) => {
         const response = await fetch(buildApiUrl(endpoint), {
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify({ id })
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id })
         });
-        
-        // Bắt chính xác lỗi HTTP (404, 500...)
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.json();
       }));
 
-      // Kiểm tra xem có sản phẩm nào bị lỗi logic từ Backend không
       const errorResult = results.find(r => r.status === 'error');
       if (errorResult) {
         alert(`Máy chủ từ chối xử lý: ${errorResult.message}`);
       } else {
-        // Tùy chọn: Thay thế alert này bằng một Toast Notification sau này nếu muốn UI đẹp hơn nữa
-        // alert(isApprove ? 'Đã duyệt sản phẩm thành công!' : 'Đã xóa sản phẩm thành công!');
         setSelectedIds([]);
-        fetchPendingProducts();
+        fetchProducts(); // Tải lại toàn bộ dữ liệu 2 tab
       }
     } catch (error) {
       console.error("Critical Fetch Error:", error);
-      alert(`Lỗi Mạng hoặc API không tồn tại (${endpoint}). Vui lòng bấm F12 xem tab Network!`);
+      alert(`Lỗi Mạng hoặc API cấu hình sai. Vui lòng kiểm tra lại F12 Network!`);
     } finally {
-      // Đóng modal sau khi xử lý xong
       setConfirmDialog({ isOpen: false, type: null });
     }
   };
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!formData.image_url) {
       alert("Vui lòng cung cấp URL Hình ảnh hoặc chờ ảnh tải lên hoàn tất!");
       return;
@@ -254,10 +249,10 @@ export default function AdminProduct() {
       });
       const result = await response.json();
       if (result.status === 'success') {
-        alert('Đã xuất bản sản phẩm thành công!');
         setFormData({ product_name: '', manufacturer: '', product_type: '', image_url: '', description: '' });
         setSpecs([]);
         setImageInputMode('url'); 
+        fetchProducts();
       } else {
         alert(`Lỗi: ${result.message}`);
       }
@@ -268,51 +263,50 @@ export default function AdminProduct() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-md overflow-hidden relative">
+      <div className="max-w-[1400px] mx-auto bg-white rounded-xl shadow-md overflow-hidden relative">
         
+        {/* ================= THANG ĐIỀU HƯỚNG TABS ================= */}
         <div className="border-b border-gray-200">
           <div className="flex bg-gray-50">
-            <button onClick={() => setActiveTab('review')} className={`flex-1 py-4 text-center font-bold text-lg uppercase tracking-wide transition-colors ${activeTab === 'review' ? 'bg-white text-blue-700 border-t-4 border-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}>
-              Duyệt Sản Phẩm (Bot)
+            <button onClick={() => setActiveTab('review')} className={`flex-1 py-4 text-center font-bold text-sm md:text-base uppercase tracking-wide transition-colors ${activeTab === 'review' ? 'bg-white text-blue-700 border-t-4 border-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}>
+              Chờ Duyệt ({pendingProducts.length})
             </button>
-            <button onClick={() => setActiveTab('manual')} className={`flex-1 py-4 text-center font-bold text-lg uppercase tracking-wide transition-colors ${activeTab === 'manual' ? 'bg-white text-[#f26522] border-t-4 border-[#f26522]' : 'text-gray-500 hover:bg-gray-100'}`}>
+            <button onClick={() => setActiveTab('manage')} className={`flex-1 py-4 text-center font-bold text-sm md:text-base uppercase tracking-wide transition-colors ${activeTab === 'manage' ? 'bg-white text-emerald-600 border-t-4 border-emerald-600' : 'text-gray-500 hover:bg-gray-100'}`}>
+              Quản lý Sản Phẩm ({approvedProducts.length})
+            </button>
+            <button onClick={() => setActiveTab('manual')} className={`flex-1 py-4 text-center font-bold text-sm md:text-base uppercase tracking-wide transition-colors ${activeTab === 'manual' ? 'bg-white text-[#f26522] border-t-4 border-[#f26522]' : 'text-gray-500 hover:bg-gray-100'}`}>
               Đăng Thủ Công
             </button>
           </div>
         </div>
 
         <div className="p-8">
-          {/* TAB 1: REVIEW */}
+          
+          {/* ================= TAB 1: SẢN PHẨM CHỜ DUYỆT ================= */}
           {activeTab === 'review' && (
             <div>
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-gray-800">Sản phẩm chờ duyệt ({pendingProducts.length})</h3>
+                <h3 className="text-xl font-bold text-gray-800">Cần kiểm duyệt</h3>
                 {selectedIds.length > 0 && (
                   <div className="flex gap-3">
-                    {/* TRIGGER CUSTOM MODALS */}
-                    <button onClick={() => setConfirmDialog({ isOpen: true, type: 'delete' })} className="bg-red-100 text-red-700 hover:bg-red-200 px-4 py-2 rounded font-bold transition-colors">
-                      Xóa bỏ ({selectedIds.length})
-                    </button>
-                    <button onClick={() => setConfirmDialog({ isOpen: true, type: 'approve' })} className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded font-bold transition-colors shadow-sm">
-                      Duyệt & Đăng bài ({selectedIds.length})
-                    </button>
+                    <button onClick={() => setConfirmDialog({ isOpen: true, type: 'delete' })} className="bg-red-100 text-red-700 hover:bg-red-200 px-4 py-2 rounded font-bold transition-colors">Xóa bỏ ({selectedIds.length})</button>
+                    <button onClick={() => setConfirmDialog({ isOpen: true, type: 'approve' })} className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded font-bold transition-colors shadow-sm">Duyệt & Đăng bài ({selectedIds.length})</button>
                   </div>
                 )}
               </div>
 
               {isLoading ? (
-                <div className="text-center py-12 text-gray-500">Đang tải dữ liệu từ máy chủ...</div>
+                <div className="text-center py-12 text-gray-500">Đang tải dữ liệu...</div>
               ) : pendingProducts.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">Không có sản phẩm nào cần duyệt.</div>
+                <div className="text-center py-12 text-gray-500 font-medium">Kho dữ liệu sạch sẽ. Không có sản phẩm nào đang chờ duyệt.</div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto border border-gray-200 rounded-lg">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-gray-50 text-gray-600 border-y border-gray-200">
+                      <tr className="bg-gray-50 text-gray-600 border-b border-gray-200">
                         <th className="p-4 w-12"><input type="checkbox" className="w-5 h-5 accent-blue-600 cursor-pointer" onChange={(e) => setSelectedIds(e.target.checked ? pendingProducts.map(p => p.id) : [])} checked={selectedIds.length === pendingProducts.length && pendingProducts.length > 0} /></th>
                         <th className="p-4 font-semibold uppercase text-xs">Hình ảnh</th>
                         <th className="p-4 font-semibold uppercase text-xs">Tên sản phẩm</th>
-                        <th className="p-4 font-semibold uppercase text-xs">Phân loại</th>
                         <th className="p-4 font-semibold uppercase text-xs">Mô tả</th>
                         <th className="p-4 font-semibold uppercase text-xs">Thời gian cào</th>
                         <th className="p-4 font-semibold uppercase text-xs text-center">Thao tác</th>
@@ -322,22 +316,12 @@ export default function AdminProduct() {
                       {pendingProducts.map(product => (
                         <tr key={product.id} className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
                           <td className="p-4"><input type="checkbox" className="w-5 h-5 accent-blue-600 cursor-pointer" checked={selectedIds.includes(product.id)} onChange={() => toggleSelect(product.id)} /></td>
-                          <td className="p-4"><img src={product.image_url} alt={product.product_name} className="w-16 h-16 object-cover rounded border" /></td>
-                          <td className="p-4 font-medium text-gray-900">{product.product_name}</td>
-                          <td className="p-4 text-sm text-gray-600">
-                            <span className="text-xs text-gray-500">{product.product_type}</span>
-                          </td>
+                          <td className="p-4"><img src={product.image_url} alt="img" className="w-16 h-16 object-cover rounded border bg-white" /></td>
+                          <td className="p-4 font-medium text-gray-900 max-w-xs">{product.product_name} <br/><span className="text-xs font-normal text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full mt-1 inline-block">{product.product_type}</span></td>
                           <td className="p-4 text-sm text-gray-500 max-w-xs truncate">{product.description}</td>
-                          <td className="p-4 text-sm text-gray-500 font-semibold text-[#f26522]">
-                            {product.created_at ? new Date(product.created_at).toLocaleString('vi-VN', {
-                              hour: '2-digit', minute: '2-digit', second: '2-digit',
-                              day: '2-digit', month: '2-digit', year: 'numeric'
-                            }) : 'Không xác định'}
-                          </td>
+                          <td className="p-4 text-sm text-gray-500 font-semibold">{product.created_at ? new Date(product.created_at).toLocaleString('vi-VN') : '---'}</td>
                           <td className="p-4 text-center">
-                            <button onClick={() => openEditModal(product)} className="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded transition-colors">
-                              Sửa
-                            </button>
+                            <button onClick={() => openEditModal(product)} className="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded transition-colors">Sửa</button>
                           </td>
                         </tr>
                       ))}
@@ -348,9 +332,60 @@ export default function AdminProduct() {
             </div>
           )}
 
-          {/* TAB 2: MANUAL SUBMIT */}
+          {/* ================= TAB 2: QUẢN LÝ ĐÃ DUYỆT ================= */}
+          {activeTab === 'manage' && (
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-800">Sản phẩm đang hiển thị</h3>
+                {selectedIds.length > 0 && (
+                  <div className="flex gap-3">
+                    <button onClick={() => setConfirmDialog({ isOpen: true, type: 'delete' })} className="bg-red-100 text-red-700 hover:bg-red-200 px-4 py-2 rounded font-bold transition-colors">Xóa vĩnh viễn ({selectedIds.length})</button>
+                    <button onClick={() => setConfirmDialog({ isOpen: true, type: 'hide' })} className="bg-amber-100 text-amber-700 hover:bg-amber-200 px-4 py-2 rounded font-bold transition-colors shadow-sm">Ẩn khỏi Web ({selectedIds.length})</button>
+                  </div>
+                )}
+              </div>
+
+              {isLoading ? (
+                <div className="text-center py-12 text-gray-500">Đang tải dữ liệu...</div>
+              ) : approvedProducts.length === 0 ? (
+                <div className="text-center py-12 text-gray-500 font-medium">Chưa có sản phẩm nào được hiển thị trên Website.</div>
+              ) : (
+                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-emerald-50 text-emerald-800 border-b border-emerald-200">
+                        <th className="p-4 w-12"><input type="checkbox" className="w-5 h-5 accent-emerald-600 cursor-pointer" onChange={(e) => setSelectedIds(e.target.checked ? approvedProducts.map(p => p.id) : [])} checked={selectedIds.length === approvedProducts.length && approvedProducts.length > 0} /></th>
+                        <th className="p-4 font-semibold uppercase text-xs">Hình ảnh</th>
+                        <th className="p-4 font-semibold uppercase text-xs">Tên sản phẩm</th>
+                        <th className="p-4 font-semibold uppercase text-xs">Nhà SX</th>
+                        <th className="p-4 font-semibold uppercase text-xs text-center">Trạng thái</th>
+                        <th className="p-4 font-semibold uppercase text-xs text-center">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {approvedProducts.map(product => (
+                        <tr key={product.id} className="border-b border-gray-100 hover:bg-emerald-50/50 transition-colors">
+                          <td className="p-4"><input type="checkbox" className="w-5 h-5 accent-emerald-600 cursor-pointer" checked={selectedIds.includes(product.id)} onChange={() => toggleSelect(product.id)} /></td>
+                          <td className="p-4"><img src={product.image_url} alt="img" className="w-16 h-16 object-cover rounded border bg-white" /></td>
+                          <td className="p-4 font-medium text-gray-900 max-w-sm">{product.product_name}</td>
+                          <td className="p-4 text-sm text-gray-600">{product.manufacturer}</td>
+                          <td className="p-4 text-center"><span className="bg-emerald-100 text-emerald-700 font-bold px-3 py-1 rounded-full text-xs">Đang hiển thị</span></td>
+                          <td className="p-4 text-center">
+                            <button onClick={() => openEditModal(product)} className="text-emerald-600 hover:text-emerald-800 font-bold bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded transition-colors mr-2">Sửa</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ================= TAB 3: ĐĂNG THỦ CÔNG ================= */}
           {activeTab === 'manual' && (
             <form className="max-w-4xl mx-auto space-y-6" onSubmit={handleManualSubmit}>
+              {/* Giữ nguyên khối form của phiên trước */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Tên sản phẩm *</label>
@@ -377,51 +412,24 @@ export default function AdminProduct() {
                   <div className="flex justify-between items-center mb-2">
                     <label className="text-sm font-bold text-gray-700">Hình ảnh sản phẩm *</label>
                     <div className="flex bg-gray-200 rounded p-1">
-                      <button 
-                        type="button" 
-                        onClick={() => setImageInputMode('url')}
-                        className={`px-3 py-1 text-xs font-bold rounded ${imageInputMode === 'url' ? 'bg-white text-[#f26522] shadow' : 'text-gray-600 hover:bg-gray-300'}`}
-                      >
-                        Nhập URL
-                      </button>
-                      <button 
-                        type="button" 
-                        onClick={() => setImageInputMode('upload')}
-                        className={`px-3 py-1 text-xs font-bold rounded ${imageInputMode === 'upload' ? 'bg-white text-[#f26522] shadow' : 'text-gray-600 hover:bg-gray-300'}`}
-                      >
-                        Tải file lên
-                      </button>
+                      <button type="button" onClick={() => setImageInputMode('url')} className={`px-3 py-1 text-xs font-bold rounded ${imageInputMode === 'url' ? 'bg-white text-[#f26522] shadow' : 'text-gray-600 hover:bg-gray-300'}`}>Nhập URL</button>
+                      <button type="button" onClick={() => setImageInputMode('upload')} className={`px-3 py-1 text-xs font-bold rounded ${imageInputMode === 'upload' ? 'bg-white text-[#f26522] shadow' : 'text-gray-600 hover:bg-gray-300'}`}>Tải file lên</button>
                     </div>
                   </div>
 
                   {imageInputMode === 'url' ? (
-                    <input 
-                      type="url" 
-                      required 
-                      placeholder="https://..." 
-                      value={formData.image_url} 
-                      onChange={e => setFormData({...formData, image_url: e.target.value})} 
-                      className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522]" 
-                    />
+                    <input type="url" required placeholder="https://..." value={formData.image_url} onChange={e => setFormData({...formData, image_url: e.target.value})} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522]" />
                   ) : (
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition-colors">
-                      <input 
-                        type="file" 
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden" 
-                        id="image-upload"
-                      />
+                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="image-upload" />
                       <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center justify-center">
                         <span className="text-2xl mb-2">📁</span>
                         <span className="text-sm text-gray-600 font-semibold">Nhấn để chọn ảnh từ máy</span>
-                        <span className="text-xs text-gray-400 mt-1">Hỗ trợ JPG, PNG, WEBP</span>
                       </label>
                       {isUploadingImage && <p className="text-sm text-blue-600 mt-2 font-bold animate-pulse">Đang tải ảnh lên máy chủ Cloud...</p>}
                       {formData.image_url && imageInputMode === 'upload' && !isUploadingImage && (
                         <div className="mt-2 flex flex-col items-center">
                           <img src={formData.image_url} alt="Preview" className="h-16 w-16 object-cover rounded border border-gray-200 mb-1" />
-                          <p className="text-xs text-green-600 truncate max-w-full">Tải thành công: {formData.image_url}</p>
                         </div>
                       )}
                     </div>
@@ -437,17 +445,15 @@ export default function AdminProduct() {
               <div className="border border-gray-200 rounded-lg p-5 bg-gray-50">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-bold text-gray-800">Thông số kỹ thuật (Tùy chọn)</h4>
-                  <button type="button" onClick={addSpecField} className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-sm font-bold transition-colors">
-                    + Thêm thông số
-                  </button>
+                  <button type="button" onClick={addSpecField} className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-sm font-bold">+ Thêm thông số</button>
                 </div>
                 {specs.length === 0 ? (
-                  <p className="text-sm text-gray-500 italic">Chưa có thông số nào. Nhấn "Thêm thông số" để bắt đầu.</p>
+                  <p className="text-sm text-gray-500 italic">Chưa có thông số nào.</p>
                 ) : (
                   <div className="space-y-3">
                     {specs.map((spec, index) => (
                       <div key={index} className="flex gap-3">
-                        <input type="text" placeholder="Tên (VD: RAM, CPU...)" value={spec.key} onChange={(e) => handleSpecChange(index, 'key', e.target.value)} className="w-1/3 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#f26522]" />
+                        <input type="text" placeholder="Tên (VD: RAM)" value={spec.key} onChange={(e) => handleSpecChange(index, 'key', e.target.value)} className="w-1/3 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#f26522]" />
                         <input type="text" placeholder="Giá trị" value={spec.value} onChange={(e) => handleSpecChange(index, 'value', e.target.value)} className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#f26522]" />
                         <button type="button" onClick={() => removeSpecField(index)} className="bg-red-50 text-red-500 hover:bg-red-100 px-3 py-2 rounded">✕</button>
                       </div>
@@ -463,33 +469,38 @@ export default function AdminProduct() {
           )}
         </div>
 
-        {/* ================= 🌟 NEW: MODAL UI XÁC NHẬN CHUYÊN NGHIỆP ================= */}
+        {/* ================= 🌟 FIX: UI MODAL XÁC NHẬN (KHÔNG CÒN ĐEN THUI) ================= */}
         {confirmDialog.isOpen && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 transform transition-all">
+          // Thay đổi bg-black thành hệ màu làm mờ nhẹ nhàng của Tailwind
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 transition-all">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 border border-gray-100">
               <div className="flex flex-col items-center text-center">
-                {/* ICON DYNAMIC DỰA THEO HÀNH ĐỘNG */}
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${confirmDialog.type === 'approve' ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'}`}>
-                  {confirmDialog.type === 'approve' ? (
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  ) : (
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  )}
+                
+                {/* HIỂN THỊ ICON TƯƠNG ỨNG HÀNH ĐỘNG */}
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 
+                  ${confirmDialog.type === 'approve' ? 'bg-blue-50 text-blue-600' : 
+                    confirmDialog.type === 'hide' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'}`}>
+                  {confirmDialog.type === 'approve' && <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
+                  {confirmDialog.type === 'hide' && <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>}
+                  {confirmDialog.type === 'delete' && <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>}
                 </div>
                 
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  {confirmDialog.type === 'approve' ? 'Xác nhận Duyệt bài' : 'Xác nhận Xóa dữ liệu'}
+                  {confirmDialog.type === 'approve' ? 'Xác nhận Duyệt bài' : 
+                   confirmDialog.type === 'hide' ? 'Xác nhận Ẩn sản phẩm' : 'Xác nhận Xóa dữ liệu'}
                 </h3>
                 <p className="text-gray-500 mb-8 text-sm">
-                  Bạn có chắc chắn muốn {confirmDialog.type === 'approve' ? 'duyệt hiển thị' : 'xóa vĩnh viễn'} <strong className="text-gray-900 text-lg">{selectedIds.length}</strong> sản phẩm đã chọn? Thao tác này không thể hoàn tác.
+                  Bạn có chắc chắn muốn {confirmDialog.type === 'approve' ? 'hiển thị' : confirmDialog.type === 'hide' ? 'đưa về kho chờ duyệt' : 'xóa vĩnh viễn'} <strong className="text-gray-900 text-lg">{selectedIds.length}</strong> sản phẩm?
                 </p>
                 
                 <div className="flex w-full gap-3">
                   <button onClick={() => setConfirmDialog({ isOpen: false, type: null })} className="flex-1 py-2.5 rounded-lg font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">
                     Hủy bỏ
                   </button>
-                  <button onClick={executeConfirmAction} className={`flex-1 py-2.5 rounded-lg font-bold text-white transition-colors ${confirmDialog.type === 'approve' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700 shadow-md'}`}>
-                    Đồng ý {confirmDialog.type === 'approve' ? 'Duyệt' : 'Xóa'}
+                  <button onClick={executeConfirmAction} className={`flex-1 py-2.5 rounded-lg font-bold text-white transition-colors shadow-md 
+                    ${confirmDialog.type === 'approve' ? 'bg-blue-600 hover:bg-blue-700' : 
+                      confirmDialog.type === 'hide' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                    {confirmDialog.type === 'approve' ? 'Duyệt bài' : confirmDialog.type === 'hide' ? 'Ẩn ngay' : 'Xóa ngay'}
                   </button>
                 </div>
               </div>
@@ -497,17 +508,18 @@ export default function AdminProduct() {
           </div>
         )}
 
-        {/* MODAL CẬP NHẬT SẢN PHẨM */}
+        {/* ================= MODAL SỬA SẢN PHẨM ================= */}
         {isUpdateModalOpen && editingProduct && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
-                <h2 className="text-xl font-bold text-gray-800">Cập nhật Sản Phẩm: {editingProduct.id}</h2>
+                <h2 className="text-xl font-bold text-gray-800">Cập nhật Sản Phẩm: {editingProduct.product_name}</h2>
                 <button onClick={closeEditModal} className="text-gray-500 hover:text-red-500 font-bold text-xl">✕</button>
               </div>
               
               <div className="p-6">
                 <form className="space-y-6" onSubmit={handleUpdateSubmit}>
+                  {/* ... GIỮ NGUYÊN FORM SỬA NHƯ BẢN CŨ ... */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">Tên sản phẩm *</label>
@@ -542,9 +554,7 @@ export default function AdminProduct() {
                   <div className="border border-gray-200 rounded-lg p-5 bg-gray-50">
                     <div className="flex justify-between items-center mb-4">
                       <h4 className="font-bold text-gray-800">Thông số kỹ thuật</h4>
-                      <button type="button" onClick={addEditSpecField} className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-sm font-bold">
-                        + Thêm thông số
-                      </button>
+                      <button type="button" onClick={addEditSpecField} className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-sm font-bold">+ Thêm thông số</button>
                     </div>
                     {editSpecs.length === 0 ? (
                       <p className="text-sm text-gray-500 italic">Không có thông số kỹ thuật.</p>
@@ -563,7 +573,7 @@ export default function AdminProduct() {
 
                   <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                     <button type="button" onClick={closeEditModal} className="px-6 py-2 rounded font-bold text-gray-600 bg-gray-200 hover:bg-gray-300 transition-colors">Hủy</button>
-                    <button type="submit" className="px-6 py-2 rounded font-bold text-white bg-blue-600 hover:bg-blue-700 shadow transition-colors">Lưu Thay Đổi</button>
+                    <button type="submit" className="px-6 py-2 rounded font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow transition-colors">Lưu Thay Đổi</button>
                   </div>
                 </form>
               </div>

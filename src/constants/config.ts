@@ -51,6 +51,7 @@ export const API_CONFIG = {
         UPDATE_PRODUCT: '/update_product.php',
         DELETE_PRODUCT: '/delete_product.php',
         APPROVE_PRODUCT: '/approve_product.php',
+        HIDE_PRODUCT: '/hide_product.php',
         GET_CONFIGS: '/get_configs.php'
     }
 } as const;
