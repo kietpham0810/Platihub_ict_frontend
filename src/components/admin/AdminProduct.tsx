@@ -29,6 +29,11 @@ export default function AdminProduct() {
   const [formData, setFormData] = useState({
     product_name: '', manufacturer: '', product_type: '', image_url: '', description: ''
   });
+  
+  // ================= 🌟 UPDATE: STATES QUẢN LÝ UPLOAD ẢNH =================
+  const [imageInputMode, setImageInputMode] = useState<'url' | 'upload'>('url');
+  const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
+  
   const [specs, setSpecs] = useState<SpecField[]>([]);
 
   // ================= STATES CHO MODAL UPDATE =================
@@ -61,6 +66,50 @@ export default function AdminProduct() {
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  };
+
+  // ================= 🌟 UPDATE: THUẬT TOÁN UPLOAD ẢNH LÊN IMGUR =================
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Kiểm tra định dạng file
+    if (!file.type.startsWith('image/')) {
+      alert('Vui lòng chọn một file hình ảnh hợp lệ (JPG, PNG, WEBP...)');
+      return;
+    }
+
+    setIsUploadingImage(true);
+    const imgData = new FormData();
+    imgData.append('image', file);
+
+    try {
+      // Gọi API ẩn danh của Imgur
+      // Lưu ý: Client-ID này là mã Public dùng chung. 
+      // Nếu dùng thật lâu dài, cậu nên đăng ký 1 Client ID miễn phí tại api.imgur.com
+      const response = await fetch('https://api.imgur.com/3/image', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Client-ID 139e72807f61c3c', 
+        },
+        body: imgData,
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Nhận link ảnh trả về và gán thẳng vào formData
+        setFormData({ ...formData, image_url: data.data.link });
+      } else {
+        alert('Lỗi tải ảnh lên Cloud: ' + (data.data?.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Lỗi upload:', error);
+      alert('Không thể kết nối đến máy chủ lưu trữ ảnh.');
+    } finally {
+      setIsUploadingImage(false);
+      // Reset input file để có thể chọn lại chính file đó nếu cần
+      e.target.value = '';
+    }
   };
 
   // ================= 2. QUẢN LÝ SPECIFICATIONS (MANUAL) =================
@@ -180,6 +229,13 @@ export default function AdminProduct() {
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Fix lỗi UX: Bấm submit mà URL đang tải chưa xong hoặc trống
+    if (!formData.image_url) {
+      alert("Vui lòng cung cấp URL Hình ảnh hoặc chờ ảnh tải lên hoàn tất!");
+      return;
+    }
+
     const specificationsObj = specs.reduce((acc, curr) => {
       if (curr.key.trim() !== '') acc[curr.key.trim()] = curr.value.trim();
       return acc;
@@ -196,6 +252,7 @@ export default function AdminProduct() {
         alert('Đã xuất bản sản phẩm thành công!');
         setFormData({ product_name: '', manufacturer: '', product_type: '', image_url: '', description: '' });
         setSpecs([]);
+        setImageInputMode('url'); // Reset về tab URL
       } else {
         alert(`Lỗi: ${result.message}`);
       }
@@ -305,9 +362,61 @@ export default function AdminProduct() {
                     <option value="Phần mềm">Phần mềm</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">URL Hình ảnh *</label>
-                  <input type="url" required placeholder="https://..." value={formData.image_url} onChange={e => setFormData({...formData, image_url: e.target.value})} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522]" />
+                
+                {/* ================= 🌟 UPDATE: KHỐI CHỌN NHẬP URL HOẶC UPLOAD ẢNH ================= */}
+                <div className="flex flex-col">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-bold text-gray-700">Hình ảnh sản phẩm *</label>
+                    <div className="flex bg-gray-200 rounded p-1">
+                      <button 
+                        type="button" 
+                        onClick={() => setImageInputMode('url')}
+                        className={`px-3 py-1 text-xs font-bold rounded ${imageInputMode === 'url' ? 'bg-white text-[#f26522] shadow' : 'text-gray-600 hover:bg-gray-300'}`}
+                      >
+                        Nhập URL
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => setImageInputMode('upload')}
+                        className={`px-3 py-1 text-xs font-bold rounded ${imageInputMode === 'upload' ? 'bg-white text-[#f26522] shadow' : 'text-gray-600 hover:bg-gray-300'}`}
+                      >
+                        Tải file lên
+                      </button>
+                    </div>
+                  </div>
+
+                  {imageInputMode === 'url' ? (
+                    <input 
+                      type="url" 
+                      required 
+                      placeholder="https://..." 
+                      value={formData.image_url} 
+                      onChange={e => setFormData({...formData, image_url: e.target.value})} 
+                      className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522]" 
+                    />
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition-colors">
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden" 
+                        id="image-upload"
+                      />
+                      <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center justify-center">
+                        <span className="text-2xl mb-2">📁</span>
+                        <span className="text-sm text-gray-600 font-semibold">Nhấn để chọn ảnh từ máy</span>
+                        <span className="text-xs text-gray-400 mt-1">Hỗ trợ JPG, PNG, WEBP</span>
+                      </label>
+                      {isUploadingImage && <p className="text-sm text-blue-600 mt-2 font-bold animate-pulse">Đang tải ảnh lên máy chủ Cloud...</p>}
+                      {formData.image_url && imageInputMode === 'upload' && !isUploadingImage && (
+                        <div className="mt-2 flex flex-col items-center">
+                          <img src={formData.image_url} alt="Preview" className="h-16 w-16 object-cover rounded border border-gray-200 mb-1" />
+                          <p className="text-xs text-green-600 truncate max-w-full">Tải thành công: {formData.image_url}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -340,7 +449,7 @@ export default function AdminProduct() {
               </div>
 
               <div className="pt-4 text-right">
-                <button type="submit" className="bg-[#f26522] hover:bg-[#d9531e] text-white font-bold py-3 px-8 rounded shadow-md transition-colors">Xuất bản Sản phẩm</button>
+                <button type="submit" disabled={isUploadingImage} className={`font-bold py-3 px-8 rounded shadow-md transition-colors ${isUploadingImage ? 'bg-gray-400 cursor-not-allowed text-gray-200' : 'bg-[#f26522] hover:bg-[#d9531e] text-white'}`}>Xuất bản Sản phẩm</button>
               </div>
             </form>
           )}
