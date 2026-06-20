@@ -11,6 +11,7 @@ interface Product {
   price?: number | null;
   is_price_visible?: number;
   specifications?: any; 
+  created_at?: string;
 }
 
 interface SpecField {
@@ -246,6 +247,7 @@ export default function AdminProduct() {
                         <th className="p-4 font-semibold uppercase text-xs">Tên sản phẩm</th>
                         <th className="p-4 font-semibold uppercase text-xs">Phân loại</th>
                         <th className="p-4 font-semibold uppercase text-xs">Mô tả</th>
+                        <th className="p-4 font-semibold uppercase text-xs">Thời gian cào</th>
                         <th className="p-4 font-semibold uppercase text-xs text-center">Thao tác</th>
                       </tr>
                     </thead>
@@ -259,6 +261,12 @@ export default function AdminProduct() {
                             <span className="text-xs text-gray-500">{product.product_type}</span>
                           </td>
                           <td className="p-4 text-sm text-gray-500 max-w-xs truncate">{product.description}</td>
+                          <td className="p-4 text-sm text-gray-500 font-semibold text-[#f26522]">
+                            {product.created_at ? new Date(product.created_at).toLocaleString('vi-VN', {
+                              hour: '2-digit', minute: '2-digit', second: '2-digit',
+                              day: '2-digit', month: '2-digit', year: 'numeric'
+                            }) : 'Không xác định'}
+                          </td>
                           <td className="p-4 text-center">
                             <button onClick={() => openEditModal(product)} className="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded transition-colors">
                               Sửa

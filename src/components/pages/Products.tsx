@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 // BƯỚC 1: IMPORT CONFIG API
 import { API_CONFIG, buildApiUrl } from '../../constants/config';
 
@@ -20,7 +19,7 @@ export default function Products() {
   
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
-  const { t } = useTranslation();
+ 
 
   useEffect(() => {
     const fetchApprovedProducts = async () => {

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useTranslation } from 'react-i18next'; // 1. Import hook
 import { ADMIN_PHONE } from '../../constants/config';
 

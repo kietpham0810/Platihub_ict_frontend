@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { SITE_CONFIG } from '../../constants/config';
 
 export default function Contact() {

@@ -1,4 +1,3 @@
-import React from 'react';
 
 // Định nghĩa Props mô phỏng dữ liệu từ Admin nhập vào
 interface PromotionProps {
