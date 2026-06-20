@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-// BƯỚC 1: IMPORT CONFIG API
+import { useSearchParams, Link } from 'react-router-dom'; // 🌟 Đã thêm { Link }
 import { API_CONFIG, buildApiUrl } from '../../constants/config';
 
 interface Product {
@@ -10,7 +9,7 @@ interface Product {
   description: string;
   manufacturer: string;
   product_type: string;
-  specifications?: string | null; // Đón chuỗi JSON từ Backend
+  specifications?: string | null;
 }
 
 export default function Products() {
@@ -19,19 +18,16 @@ export default function Products() {
   
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
- 
 
   useEffect(() => {
     const fetchApprovedProducts = async () => {
       setIsLoading(true);
       try {
-        // BƯỚC 2: GỌI API QUA GATEWAY
         const apiUrl = `${buildApiUrl(API_CONFIG.ENDPOINTS.GET_PRODUCTS)}?status=approved`;
         const response = await fetch(apiUrl);
         if (!response.ok) throw new Error('Lỗi kết nối mạng');
         
         const data = await response.json();
-        
         if (data.status === 'success') {
           setProducts(data.data);
         }
@@ -47,7 +43,6 @@ export default function Products() {
 
   const filteredProducts = products.filter(product => {
     if (!categoryParam) return true; 
-    
     switch (categoryParam) {
       case 'pc': return product.product_type === 'Thiết bị máy tính';
       case 'components': return product.product_type === 'Linh kiện';
@@ -67,7 +62,6 @@ export default function Products() {
     }
   };
 
-  // Hàm Helper bóc tách JSON an toàn, chống crash ứng dụng
   const parseSpecifications = (specsString?: string | null) => {
     if (!specsString) return null;
     try {
@@ -78,81 +72,64 @@ export default function Products() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen py-16 px-6 md:px-12">
+    <div className="bg-gray-50 min-h-screen py-12 px-4 md:px-12">
       <div className="max-w-screen-2xl mx-auto">
         
-        <div className="mb-12 text-center md:text-left border-b border-gray-200 pb-6">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-[#16223f] uppercase tracking-wide">
-            {getCategoryTitle()}
-          </h1>
-          <p className="text-gray-500 mt-2 text-lg">
-            Hiển thị {filteredProducts.length} sản phẩm
-          </p>
+        <div className="mb-10 text-center md:text-left border-b border-gray-200 pb-6">
+          <h1 className="text-3xl font-extrabold text-[#16223f] uppercase">{getCategoryTitle()}</h1>
+          <p className="text-gray-500 mt-2">Hiển thị {filteredProducts.length} sản phẩm</p>
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#f26522]"></div>
-          </div>
+          <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#f26522]"></div></div>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-24 bg-white rounded-xl shadow-sm border border-gray-100">
-            <h3 className="text-2xl font-bold text-gray-400 mb-2">Chưa có sản phẩm nào</h3>
-            <p className="text-gray-500">Các sản phẩm thuộc danh mục này đang được cập nhật.</p>
+          <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-100">
+            <h3 className="text-xl font-bold text-gray-400">Chưa có sản phẩm nào</h3>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProducts.map(product => {
-              // Bóc tách JSON cho từng sản phẩm
               const specsObj = parseSpecifications(product.specifications);
-              // Lấy tối đa 3 key đầu tiên để render preview
               const specKeys = specsObj ? Object.keys(specsObj).slice(0, 3) : [];
 
               return (
-                <div key={product.id} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 group flex flex-col">
-                  
-                  <div className="relative h-64 overflow-hidden bg-white flex items-center justify-center p-4">
-                    <img 
-                      src={product.image_url} 
-                      alt={product.product_name} 
-                      className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500"
-                    />
-                    {/* KHỐI HIỂN THỊ NHÀ SẢN XUẤT ĐÃ ĐƯỢC XÓA TẠI ĐÂY */}
+                <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col hover:shadow-lg transition-all duration-300">
+                  <div className="relative h-56 p-4 flex items-center justify-center bg-white border-b border-gray-50">
+                    <img src={product.image_url} alt={product.product_name} className="max-h-full object-contain" />
+                    {/* 🌟 Hiển thị lại Nhà sản xuất dạng tag */}
+                    <span className="absolute top-3 left-3 bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">
+                      {product.manufacturer}
+                    </span>
                   </div>
 
-                  <div className="p-6 flex flex-col flex-1 border-t border-gray-100">
-                    <span className="text-xs font-bold text-[#f26522] uppercase tracking-widest mb-2">
-                      {product.product_type}
-                    </span>
-                    <h3 className="text-lg font-bold text-gray-900 mb-3 line-clamp-2 leading-snug">
-                      {product.product_name}
-                    </h3>
+                  <div className="p-5 flex flex-col flex-grow">
+                    <h3 className="text-md font-bold text-gray-900 mb-3 line-clamp-2 h-12">{product.product_name}</h3>
                     
-                    {/* KHU VỰC HIỂN THỊ THÔNG SỐ (JSON PARSED) */}
                     {specKeys.length > 0 ? (
                       <div className="mb-4 space-y-1">
                         {specKeys.map(key => (
-                          <div key={key} className="text-xs text-gray-600 flex justify-between border-b border-gray-50 pb-1">
-                            <span className="font-semibold">{key}:</span>
-                            <span className="text-gray-800 truncate pl-2 max-w-[60%]">{specsObj[key]}</span>
+                          <div key={key} className="text-[11px] text-gray-600 flex justify-between border-b border-gray-50 pb-0.5">
+                            <span className="font-semibold text-gray-400">{key}:</span>
+                            <span className="text-gray-800 truncate pl-2">{specsObj[key]}</span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-gray-600 text-sm mb-6 line-clamp-3 flex-1">
-                        {product.description}
-                      </p>
+                      <p className="text-gray-500 text-xs mb-4 flex-1 line-clamp-3">{product.description}</p>
                     )}
                     
-                    <button className="w-full bg-gray-100 hover:bg-[#f26522] hover:text-white text-gray-800 font-bold py-3 rounded transition-colors mt-auto">
+                    <Link 
+                      to={`/product/${product.id}`} 
+                      className="w-full text-center bg-[#f26522] hover:bg-[#d9531e] text-white font-bold py-2.5 rounded-lg transition-colors mt-auto"
+                    >
                       Chi tiết sản phẩm
-                    </button>
+                    </Link>
                   </div>
                 </div>
               );
             })}
           </div>
         )}
-
       </div>
     </div>
   );
