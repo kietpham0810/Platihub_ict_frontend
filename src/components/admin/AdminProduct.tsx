@@ -23,12 +23,14 @@ export default function AdminProduct() {
   const [activeTab, setActiveTab] = useState<'review' | 'manual' | 'manage'>('review');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
-  // States chứa dữ liệu song luồng
   const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
   const [approvedProducts, setApprovedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // States form Đăng thủ công
+  // Trạng thái vận hành Bot trên UI
+  const [isBotRunning, setIsBotRunning] = useState<boolean>(false);
+  const [botReport, setBotReport] = useState<any>(null);
+
   const [formData, setFormData] = useState({
     product_name: '', manufacturer: '', product_type: '', image_url: '', description: ''
   });
@@ -37,7 +39,6 @@ export default function AdminProduct() {
   const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
   const [specs, setSpecs] = useState<SpecField[]>([]);
 
-  // States form Cập nhật
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState<boolean>(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editFormData, setEditFormData] = useState({
@@ -45,13 +46,12 @@ export default function AdminProduct() {
   });
   const [editSpecs, setEditSpecs] = useState<SpecField[]>([]);
 
-  // Quản lý trạng thái Custom Modal Xác nhận
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     type: 'approve' | 'delete' | 'hide' | null;
   }>({ isOpen: false, type: null });
 
-  // ================= ⚙️ 1. ENGINE FETCH DỮ LIỆU KÉP =================
+  // ================= KÉO DỮ LIỆU ĐỒNG THỜI =================
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
@@ -66,7 +66,7 @@ export default function AdminProduct() {
       if (pendingData.status === 'success') setPendingProducts(pendingData.data);
       if (approvedData.status === 'success') setApprovedProducts(approvedData.data);
     } catch (error) {
-      console.error("Lỗi tải danh mục sản phẩm từ Gateway:", error);
+      console.error("Lỗi tải danh mục:", error);
     } finally {
       setIsLoading(false);
     }
@@ -84,13 +84,34 @@ export default function AdminProduct() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
 
-  // ================= ☁️ 2. ENGINE UPLOAD IMGUR SERVERLESS =================
+  // ================= ĐIỀU KHIỂN HOẠT ĐỘNG CỦA BOT TỪ UI =================
+  const handleRunBot = async () => {
+    setIsBotRunning(true);
+    setBotReport(null);
+    try {
+      // Gọi trực tiếp đến file xử lý bot trên máy chủ Backend Render
+      const response = await fetch(buildApiUrl('/bot_sync_digiworld.php'));
+      const data = await response.json();
+      if (data.status === 'success') {
+        setBotReport(data.data);
+        fetchProducts(); // Cập nhật lại lưới hiển thị dữ liệu mới cào
+      } else {
+        alert('Cảnh báo từ Động cơ Bot: ' + data.message);
+      }
+    } catch (error) {
+      alert('Không thể kết nối đến luồng xử lý tự động của Bot.');
+    } finally {
+      setIsBotRunning(false);
+    }
+  };
+
+  // ================= UPLOAD ẢNH SERVERLESS =================
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Hệ thống chỉ chấp nhận định dạng file hình ảnh hợp lệ!');
+      alert('Vui lòng chọn tệp tin hình ảnh chuẩn!');
       return;
     }
 
@@ -109,17 +130,17 @@ export default function AdminProduct() {
       if (data.success) {
         setFormData({ ...formData, image_url: data.data.link });
       } else {
-        alert('Lỗi phân tách dữ liệu Cloud: ' + (data.data?.error || 'Unknown error'));
+        alert('Lỗi tải ảnh: ' + (data.data?.error || 'Unknown error'));
       }
     } catch (error) {
-      alert('Mất kết nối đến máy chủ Cloud Imgur.');
+      alert('Mất liên kết với máy chủ ảnh Cloud.');
     } finally {
       setIsUploadingImage(false);
       e.target.value = '';
     }
   };
 
-  // ================= 🛠️ 3. QUẢN LÝ DYNAMIC SPECIFICATIONS =================
+  // ================= QUẢN LÝ THÔNG SỐ KỸ THUẬT DYNAMIC =================
   const addSpecField = () => setSpecs([...specs, { key: '', value: '' }]);
   const removeSpecField = (index: number) => setSpecs(specs.filter((_, i) => i !== index));
   const handleSpecChange = (index: number, field: 'key' | 'value', value: string) => {
@@ -136,7 +157,7 @@ export default function AdminProduct() {
     setEditSpecs(newSpecs);
   };
 
-  // ================= 💾 4. LUỒNG CẬP NHẬT DỮ LIỆU =================
+  // ================= ĐOẠN ĐƯỜNG PHẪU THUẬT SỬA SẢN PHẨM =================
   const openEditModal = (product: Product) => {
     setEditingProduct(product);
     setEditFormData({
@@ -188,14 +209,14 @@ export default function AdminProduct() {
         closeEditModal();
         fetchProducts(); 
       } else {
-        alert(`Lỗi phản hồi Backend: ${result.message}`);
+        alert(`Lỗi Backend: ${result.message}`);
       }
     } catch (error) {
-      alert('Không thể thiết lập kết nối dữ liệu đến máy chủ.');
+      alert('Lỗi thiết lập kênh truyền dữ liệu.');
     }
   };
 
-  // ================= ⚡ 5. ĐỘNG CƠ THỰC THI BATCH (DUYỆT / XÓA / ẨN) =================
+  // ================= ĐIỀU PHỐI TÁC VỤ HÀNG LOẠT =================
   const executeConfirmAction = async () => {
     if (!confirmDialog.type) return;
     
@@ -215,14 +236,13 @@ export default function AdminProduct() {
 
       const errorResult = results.find(r => r.status === 'error');
       if (errorResult) {
-        alert(`Máy chủ từ chối thực thi tác vụ: ${errorResult.message}`);
+        alert(`Xử lý lỗi: ${errorResult.message}`);
       } else {
         setSelectedIds([]);
         fetchProducts(); 
       }
     } catch (error) {
-      console.error("Critical Runtime Error:", error);
-      alert(`Lỗi cấu trúc hoặc API không phản hồi. Hãy kiểm tra F12 tab Network!`);
+      alert(`Đường truyền dữ liệu API lỗi. Hãy kiểm tra F12 tab Network!`);
     } finally {
       setConfirmDialog({ isOpen: false, type: null });
     }
@@ -231,7 +251,7 @@ export default function AdminProduct() {
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.image_url) {
-      alert("Yêu cầu nhập URL hình ảnh hoặc chờ tải file hoàn tất!");
+      alert("Vui lòng bổ sung liên kết hình ảnh!");
       return;
     }
 
@@ -253,10 +273,10 @@ export default function AdminProduct() {
         setImageInputMode('url'); 
         fetchProducts();
       } else {
-        alert(`Lỗi ghi nhận: ${result.message}`);
+        alert(`Lỗi hệ thống: ${result.message}`);
       }
     } catch (error) {
-      alert('Không thể kết nối đến Gateway máy chủ.');
+      alert('Lỗi cổng kết nối API.');
     }
   };
 
@@ -264,9 +284,9 @@ export default function AdminProduct() {
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-[1400px] mx-auto bg-white rounded-xl shadow-md overflow-hidden relative">
         
-        {/* ================= TABS NAVIGATION ================= */}
-        <div className="border-b border-gray-200">
-          <div className="flex bg-gray-50">
+        {/* ================= TABS NAVIGATION & AI CONTROL PANEL ================= */}
+        <div className="border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row md:items-center md:justify-between pr-6">
+          <div className="flex flex-1">
             <button onClick={() => setActiveTab('review')} className={`flex-1 py-4 text-center font-bold text-sm md:text-base uppercase tracking-wide transition-colors ${activeTab === 'review' ? 'bg-white text-blue-700 border-t-4 border-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}>
               Chờ Duyệt ({pendingProducts.length})
             </button>
@@ -275,6 +295,24 @@ export default function AdminProduct() {
             </button>
             <button onClick={() => setActiveTab('manual')} className={`flex-1 py-4 text-center font-bold text-sm md:text-base uppercase tracking-wide transition-colors ${activeTab === 'manual' ? 'bg-white text-[#f26522] border-t-4 border-[#f26522]' : 'text-gray-500 hover:bg-gray-100'}`}>
               Đăng Thủ Công
+            </button>
+          </div>
+          
+          {/* 🤖 BẢNG ĐIỀU KHIỂN BOT CÀO DỮ LIỆU TỰ ĐỘNG CHUYÊN NGHIỆP */}
+          <div className="p-3 md:p-0 flex items-center gap-3 justify-end">
+            {botReport && (
+              <div className="text-right hidden xl:block">
+                <p className="text-[11px] text-green-600 font-bold">✨ Bot vừa quét xong trang: {botReport.scanned_pages}</p>
+                <p className="text-[10px] text-gray-400">Thêm mới: {botReport.new_inserted} | Trùng: {botReport.skipped_duplicates}</p>
+              </div>
+            )}
+            <button 
+              onClick={handleRunBot} 
+              disabled={isBotRunning}
+              className={`px-4 py-2 rounded-lg font-bold text-xs md:text-sm shadow flex items-center gap-2 transition-all ${isBotRunning ? 'bg-gray-200 text-gray-400 cursor-not-allowed animate-pulse' : 'bg-gradient-to-r from-blue-700 to-indigo-700 text-white hover:from-blue-800'}`}
+            >
+              <span>{isBotRunning ? '⚙️' : '🤖'}</span>
+              {isBotRunning ? 'Đang Deep Crawl...' : 'Kích hoạt Bot cào dữ liệu'}
             </button>
           </div>
         </div>
@@ -415,7 +453,6 @@ export default function AdminProduct() {
                     </div>
                   </div>
 
-                  {/* 🌟 THAY ĐỔI: TÍCH HỢP REAL-TIME PREVIEW CHO ĐĂNG THỦ CÔNG */}
                   {imageInputMode === 'url' ? (
                     <div className="flex gap-3 items-start">
                       <input type="url" required placeholder="https://..." value={formData.image_url} onChange={e => setFormData({...formData, image_url: e.target.value})} className="flex-1 border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522]" />
@@ -480,17 +517,16 @@ export default function AdminProduct() {
           )}
         </div>
 
-        {/* ================= 🎨 MODAL CUSTOM CONFIRM (UI KÍNH MỜ CAO CẤP) ================= */}
+        {/* ================= MODAL CUSTOM CONFIRM ================= */}
         {confirmDialog.isOpen && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 transition-all">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 border border-gray-100">
               <div className="flex flex-col items-center text-center">
-                
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 
                   ${confirmDialog.type === 'approve' ? 'bg-blue-50 text-blue-600' : 
                     confirmDialog.type === 'hide' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'}`}>
                   {confirmDialog.type === 'approve' && <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
-                  {confirmDialog.type === 'hide' && <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268-2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>}
+                  {confirmDialog.type === 'hide' && <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>}
                   {confirmDialog.type === 'delete' && <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>}
                 </div>
                 
@@ -503,9 +539,7 @@ export default function AdminProduct() {
                 </p>
                 
                 <div className="flex w-full gap-3">
-                  <button onClick={() => setConfirmDialog({ isOpen: false, type: null })} className="flex-1 py-2.5 rounded-lg font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">
-                    Hủy bỏ
-                  </button>
+                  <button onClick={() => setConfirmDialog({ isOpen: false, type: null })} className="flex-1 py-2.5 rounded-lg font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">Hủy bỏ</button>
                   <button onClick={executeConfirmAction} className={`flex-1 py-2.5 rounded-lg font-bold text-white transition-colors shadow-md 
                     ${confirmDialog.type === 'approve' ? 'bg-blue-600 hover:bg-blue-700' : 
                       confirmDialog.type === 'hide' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700'}`}>
@@ -517,7 +551,7 @@ export default function AdminProduct() {
           </div>
         )}
 
-        {/* ================= 🖼️ MODAL UPDATE SẢN PHẨM ================= */}
+        {/* ================= MODAL UPDATE SẢN PHẨM ================= */}
         {isUpdateModalOpen && editingProduct && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -549,7 +583,6 @@ export default function AdminProduct() {
                       </select>
                     </div>
 
-                    {/* 🌟 THAY ĐỔI: TÍCH HỢP REAL-TIME PREVIEW CHO KHUNG UPDATE MODAL */}
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">URL Hình ảnh *</label>
                       <div className="flex gap-3 items-start">
