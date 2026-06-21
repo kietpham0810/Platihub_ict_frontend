@@ -20,15 +20,15 @@ interface SpecField {
 }
 
 export default function AdminProduct() {
-  // 🌟 ĐÃ THÊM TAB 'manage' ĐỂ QUẢN LÝ SẢN PHẨM ĐÃ DUYỆT
   const [activeTab, setActiveTab] = useState<'review' | 'manual' | 'manage'>('review');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
-  // States chứa dữ liệu 2 luồng
+  // States chứa dữ liệu song luồng
   const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
   const [approvedProducts, setApprovedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  // States form Đăng thủ công
   const [formData, setFormData] = useState({
     product_name: '', manufacturer: '', product_type: '', image_url: '', description: ''
   });
@@ -37,6 +37,7 @@ export default function AdminProduct() {
   const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
   const [specs, setSpecs] = useState<SpecField[]>([]);
 
+  // States form Cập nhật
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState<boolean>(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editFormData, setEditFormData] = useState({
@@ -44,13 +45,13 @@ export default function AdminProduct() {
   });
   const [editSpecs, setEditSpecs] = useState<SpecField[]>([]);
 
-  // 🌟 MỞ RỘNG LOẠI HÀNH ĐỘNG CHO MODAL XÁC NHẬN: Thêm 'hide'
+  // Quản lý trạng thái Custom Modal Xác nhận
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     type: 'approve' | 'delete' | 'hide' | null;
   }>({ isOpen: false, type: null });
 
-  // ================= 1. HÀM FETCH KÉP =================
+  // ================= ⚙️ 1. ENGINE FETCH DỮ LIỆU KÉP =================
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
@@ -65,7 +66,7 @@ export default function AdminProduct() {
       if (pendingData.status === 'success') setPendingProducts(pendingData.data);
       if (approvedData.status === 'success') setApprovedProducts(approvedData.data);
     } catch (error) {
-      console.error("Lỗi khi tải sản phẩm:", error);
+      console.error("Lỗi tải danh mục sản phẩm từ Gateway:", error);
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +76,6 @@ export default function AdminProduct() {
     fetchProducts();
   }, []);
 
-  // Xóa danh sách chọn mỗi khi chuyển tab
   useEffect(() => {
     setSelectedIds([]);
   }, [activeTab]);
@@ -84,13 +84,13 @@ export default function AdminProduct() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
 
-  // ================= THUẬT TOÁN UPLOAD =================
+  // ================= ☁️ 2. ENGINE UPLOAD IMGUR SERVERLESS =================
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Vui lòng chọn một file hình ảnh hợp lệ (JPG, PNG, WEBP...)');
+      alert('Hệ thống chỉ chấp nhận định dạng file hình ảnh hợp lệ!');
       return;
     }
 
@@ -109,18 +109,17 @@ export default function AdminProduct() {
       if (data.success) {
         setFormData({ ...formData, image_url: data.data.link });
       } else {
-        alert('Lỗi tải ảnh lên Cloud: ' + (data.data?.error || 'Unknown error'));
+        alert('Lỗi phân tách dữ liệu Cloud: ' + (data.data?.error || 'Unknown error'));
       }
     } catch (error) {
-      console.error('Lỗi upload:', error);
-      alert('Không thể kết nối đến máy chủ lưu trữ ảnh.');
+      alert('Mất kết nối đến máy chủ Cloud Imgur.');
     } finally {
       setIsUploadingImage(false);
       e.target.value = '';
     }
   };
 
-  // ================= QUẢN LÝ SPECIFICATIONS =================
+  // ================= 🛠️ 3. QUẢN LÝ DYNAMIC SPECIFICATIONS =================
   const addSpecField = () => setSpecs([...specs, { key: '', value: '' }]);
   const removeSpecField = (index: number) => setSpecs(specs.filter((_, i) => i !== index));
   const handleSpecChange = (index: number, field: 'key' | 'value', value: string) => {
@@ -137,7 +136,7 @@ export default function AdminProduct() {
     setEditSpecs(newSpecs);
   };
 
-  // ================= LUỒNG SỬA SẢN PHẨM =================
+  // ================= 💾 4. LUỒNG CẬP NHẬT DỮ LIỆU =================
   const openEditModal = (product: Product) => {
     setEditingProduct(product);
     setEditFormData({
@@ -187,16 +186,16 @@ export default function AdminProduct() {
 
       if (result.status === 'success') {
         closeEditModal();
-        fetchProducts(); // Cập nhật lại cả 2 bảng
+        fetchProducts(); 
       } else {
-        alert(`Lỗi: ${result.message}`);
+        alert(`Lỗi phản hồi Backend: ${result.message}`);
       }
     } catch (error) {
-      alert('Không thể kết nối đến máy chủ.');
+      alert('Không thể thiết lập kết nối dữ liệu đến máy chủ.');
     }
   };
 
-  // ================= ĐỘNG CƠ THỰC THI (DUYỆT / XÓA / ẨN) =================
+  // ================= ⚡ 5. ĐỘNG CƠ THỰC THI BATCH (DUYỆT / XÓA / ẨN) =================
   const executeConfirmAction = async () => {
     if (!confirmDialog.type) return;
     
@@ -216,14 +215,14 @@ export default function AdminProduct() {
 
       const errorResult = results.find(r => r.status === 'error');
       if (errorResult) {
-        alert(`Máy chủ từ chối xử lý: ${errorResult.message}`);
+        alert(`Máy chủ từ chối thực thi tác vụ: ${errorResult.message}`);
       } else {
         setSelectedIds([]);
-        fetchProducts(); // Tải lại toàn bộ dữ liệu 2 tab
+        fetchProducts(); 
       }
     } catch (error) {
-      console.error("Critical Fetch Error:", error);
-      alert(`Lỗi Mạng hoặc API cấu hình sai. Vui lòng kiểm tra lại F12 Network!`);
+      console.error("Critical Runtime Error:", error);
+      alert(`Lỗi cấu trúc hoặc API không phản hồi. Hãy kiểm tra F12 tab Network!`);
     } finally {
       setConfirmDialog({ isOpen: false, type: null });
     }
@@ -232,7 +231,7 @@ export default function AdminProduct() {
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.image_url) {
-      alert("Vui lòng cung cấp URL Hình ảnh hoặc chờ ảnh tải lên hoàn tất!");
+      alert("Yêu cầu nhập URL hình ảnh hoặc chờ tải file hoàn tất!");
       return;
     }
 
@@ -254,10 +253,10 @@ export default function AdminProduct() {
         setImageInputMode('url'); 
         fetchProducts();
       } else {
-        alert(`Lỗi: ${result.message}`);
+        alert(`Lỗi ghi nhận: ${result.message}`);
       }
     } catch (error) {
-      alert('Không thể kết nối đến máy chủ.');
+      alert('Không thể kết nối đến Gateway máy chủ.');
     }
   };
 
@@ -265,7 +264,7 @@ export default function AdminProduct() {
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-[1400px] mx-auto bg-white rounded-xl shadow-md overflow-hidden relative">
         
-        {/* ================= THANG ĐIỀU HƯỚNG TABS ================= */}
+        {/* ================= TABS NAVIGATION ================= */}
         <div className="border-b border-gray-200">
           <div className="flex bg-gray-50">
             <button onClick={() => setActiveTab('review')} className={`flex-1 py-4 text-center font-bold text-sm md:text-base uppercase tracking-wide transition-colors ${activeTab === 'review' ? 'bg-white text-blue-700 border-t-4 border-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}>
@@ -282,7 +281,7 @@ export default function AdminProduct() {
 
         <div className="p-8">
           
-          {/* ================= TAB 1: SẢN PHẨM CHỜ DUYỆT ================= */}
+          {/* TAB 1: REVIEW */}
           {activeTab === 'review' && (
             <div>
               <div className="flex justify-between items-center mb-6">
@@ -332,7 +331,7 @@ export default function AdminProduct() {
             </div>
           )}
 
-          {/* ================= TAB 2: QUẢN LÝ ĐÃ DUYỆT ================= */}
+          {/* TAB 2: MANAGE */}
           {activeTab === 'manage' && (
             <div>
               <div className="flex justify-between items-center mb-6">
@@ -382,10 +381,9 @@ export default function AdminProduct() {
             </div>
           )}
 
-          {/* ================= TAB 3: ĐĂNG THỦ CÔNG ================= */}
+          {/* TAB 3: ĐĂNG THỦ CÔNG */}
           {activeTab === 'manual' && (
             <form className="max-w-4xl mx-auto space-y-6" onSubmit={handleManualSubmit}>
-              {/* Giữ nguyên khối form của phiên trước */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Tên sản phẩm *</label>
@@ -417,8 +415,21 @@ export default function AdminProduct() {
                     </div>
                   </div>
 
+                  {/* 🌟 THAY ĐỔI: TÍCH HỢP REAL-TIME PREVIEW CHO ĐĂNG THỦ CÔNG */}
                   {imageInputMode === 'url' ? (
-                    <input type="url" required placeholder="https://..." value={formData.image_url} onChange={e => setFormData({...formData, image_url: e.target.value})} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522]" />
+                    <div className="flex gap-3 items-start">
+                      <input type="url" required placeholder="https://..." value={formData.image_url} onChange={e => setFormData({...formData, image_url: e.target.value})} className="flex-1 border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522]" />
+                      {formData.image_url && (
+                        <div className="w-12 h-12 flex-shrink-0 border border-gray-200 rounded overflow-hidden bg-gray-50 shadow-sm">
+                          <img 
+                            src={formData.image_url} 
+                            alt="Preview" 
+                            className="w-full h-full object-cover" 
+                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150?text=L%E1%BB%97i' }} 
+                          />
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition-colors">
                       <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="image-upload" />
@@ -445,7 +456,7 @@ export default function AdminProduct() {
               <div className="border border-gray-200 rounded-lg p-5 bg-gray-50">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-bold text-gray-800">Thông số kỹ thuật (Tùy chọn)</h4>
-                  <button type="button" onClick={addSpecField} className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-sm font-bold">+ Thêm thông số</button>
+                  <button type="button" onClick={addSpecField} className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-sm font-bold transition-colors">+ Thêm thông số</button>
                 </div>
                 {specs.length === 0 ? (
                   <p className="text-sm text-gray-500 italic">Chưa có thông số nào.</p>
@@ -469,19 +480,17 @@ export default function AdminProduct() {
           )}
         </div>
 
-        {/* ================= 🌟 FIX: UI MODAL XÁC NHẬN (KHÔNG CÒN ĐEN THUI) ================= */}
+        {/* ================= 🎨 MODAL CUSTOM CONFIRM (UI KÍNH MỜ CAO CẤP) ================= */}
         {confirmDialog.isOpen && (
-          // Thay đổi bg-black thành hệ màu làm mờ nhẹ nhàng của Tailwind
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 transition-all">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 border border-gray-100">
               <div className="flex flex-col items-center text-center">
                 
-                {/* HIỂN THỊ ICON TƯƠNG ỨNG HÀNH ĐỘNG */}
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 
                   ${confirmDialog.type === 'approve' ? 'bg-blue-50 text-blue-600' : 
                     confirmDialog.type === 'hide' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'}`}>
                   {confirmDialog.type === 'approve' && <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
-                  {confirmDialog.type === 'hide' && <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>}
+                  {confirmDialog.type === 'hide' && <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268-2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>}
                   {confirmDialog.type === 'delete' && <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>}
                 </div>
                 
@@ -508,7 +517,7 @@ export default function AdminProduct() {
           </div>
         )}
 
-        {/* ================= MODAL SỬA SẢN PHẨM ================= */}
+        {/* ================= 🖼️ MODAL UPDATE SẢN PHẨM ================= */}
         {isUpdateModalOpen && editingProduct && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -519,7 +528,6 @@ export default function AdminProduct() {
               
               <div className="p-6">
                 <form className="space-y-6" onSubmit={handleUpdateSubmit}>
-                  {/* ... GIỮ NGUYÊN FORM SỬA NHƯ BẢN CŨ ... */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">Tên sản phẩm *</label>
@@ -540,9 +548,29 @@ export default function AdminProduct() {
                         <option value="Phần mềm">Phần mềm</option>
                       </select>
                     </div>
+
+                    {/* 🌟 THAY ĐỔI: TÍCH HỢP REAL-TIME PREVIEW CHO KHUNG UPDATE MODAL */}
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">URL Hình ảnh *</label>
-                      <input type="url" required value={editFormData.image_url} onChange={e => setEditFormData({...editFormData, image_url: e.target.value})} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-blue-600" />
+                      <div className="flex gap-3 items-start">
+                        <input 
+                          type="url" 
+                          required 
+                          value={editFormData.image_url} 
+                          onChange={e => setEditFormData({...editFormData, image_url: e.target.value})} 
+                          className="flex-1 border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-blue-600" 
+                        />
+                        {editFormData.image_url && (
+                          <div className="w-12 h-12 flex-shrink-0 border border-gray-200 rounded overflow-hidden bg-gray-50 shadow-sm">
+                            <img 
+                              src={editFormData.image_url} 
+                              alt="Preview" 
+                              className="w-full h-full object-cover" 
+                              onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150?text=L%E1%BB%97i' }} 
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
