@@ -216,7 +216,37 @@ export default function AdminProduct() {
     }
   };
 
-  // ================= ĐIỀU PHỐI TÁC VỤ HÀNG LOẠT =================
+  // ================= ĐIỀU PHỐI TÁC VỤ HÀNG LOẠT ================= DB khỏe có thể dùng
+    // const executeConfirmAction = async () => {
+    //   if (!confirmDialog.type) return;
+      
+    //   let endpoint = '';
+    //   if (confirmDialog.type === 'approve') endpoint = API_CONFIG.ENDPOINTS.APPROVE_PRODUCT;
+    //   else if (confirmDialog.type === 'delete') endpoint = API_CONFIG.ENDPOINTS.DELETE_PRODUCT;
+    //   else if (confirmDialog.type === 'hide') endpoint = API_CONFIG.ENDPOINTS.HIDE_PRODUCT;
+
+    //   try {
+    //     const results = await Promise.all(selectedIds.map(async (id) => {
+    //       const response = await fetch(buildApiUrl(endpoint), {
+    //         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id })
+    //       });
+    //       if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    //       return await response.json();
+    //     }));
+
+    //     const errorResult = results.find(r => r.status === 'error');
+    //     if (errorResult) {
+    //       alert(`Xử lý lỗi: ${errorResult.message}`);
+    //     } else {
+    //       setSelectedIds([]);
+    //       fetchProducts(); 
+    //     }
+    //   } catch (error) {
+    //     alert(`Đường truyền dữ liệu API lỗi. Hãy kiểm tra F12 tab Network!`);
+    //   } finally {
+    //     setConfirmDialog({ isOpen: false, type: null });
+    //   }
+    // };
   const executeConfirmAction = async () => {
     if (!confirmDialog.type) return;
     
