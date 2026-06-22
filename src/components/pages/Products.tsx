@@ -12,13 +12,28 @@ interface Product {
   specifications?: string | null;
 }
 
+// Cấu hình các bộ lọc TGDD style
+const QUICK_FILTERS = [
+  { label: 'Core i3', keyword: 'i3' },
+  { label: 'Core i5', keyword: 'i5' },
+  { label: 'Core i7', keyword: 'i7' },
+  { label: 'Core i9', keyword: 'i9' },
+  { label: 'Ryzen 5', keyword: 'ryzen 5' },
+  { label: 'Ryzen 7', keyword: 'ryzen 7' },
+  { label: 'RAM 8GB', keyword: '8gb' },
+  { label: 'RAM 16GB', keyword: '16gb' },
+];
+
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
+  // STATE LỌC CẤU HÌNH NHANH
+  const [activeSpecFilters, setActiveSpecFilters] = useState<string[]>([]);
+  
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
-  const searchKeyword = searchParams.get('search'); // Bắt từ khóa từ Header truyền sang
+  const searchKeyword = searchParams.get('search');
 
   useEffect(() => {
     const fetchApprovedProducts = async () => {
@@ -42,9 +57,18 @@ export default function Products() {
     fetchApprovedProducts();
   }, []);
 
-  // Bộ máy lọc kép: Chạy qua phễu Danh mục, sau đó chạy qua phễu Tìm kiếm
+  // Xử lý click chọn/bỏ chọn bộ lọc cấu hình
+  const toggleSpecFilter = (keyword: string) => {
+    setActiveSpecFilters(prev => 
+      prev.includes(keyword) 
+        ? prev.filter(k => k !== keyword) // Bỏ chọn nếu đã có
+        : [...prev, keyword] // Thêm vào nếu chưa có
+    );
+  };
+
+  // ================= BỘ MÁY LỌC 3 TẦNG =================
   const filteredProducts = products.filter(product => {
-    // 1. Lọc theo Category (Nếu có)
+    // Tầng 1: Lọc theo Category trên URL
     let matchCategory = true;
     if (categoryParam) {
       switch (categoryParam) {
@@ -56,7 +80,7 @@ export default function Products() {
       }
     }
 
-    // 2. Lọc theo từ khóa Search (Nếu có)
+    // Tầng 2: Lọc theo từ khóa Search trên Header
     let matchSearch = true;
     if (searchKeyword) {
       const lowerKeyword = searchKeyword.toLowerCase();
@@ -65,13 +89,22 @@ export default function Products() {
         (product.manufacturer && product.manufacturer.toLowerCase().includes(lowerKeyword));
     }
 
-    return matchCategory && matchSearch;
+    // Tầng 3: Lọc theo Thông số kỹ thuật (TGDD Style)
+    let matchSpecs = true;
+    if (activeSpecFilters.length > 0) {
+      // Ép toàn bộ chuỗi JSON specifications về chữ thường để quét
+      const rawSpecsStr = product.specifications ? product.specifications.toLowerCase() : '';
+      
+      // Sản phẩm phải chứa ÍT NHẤT MỘT (hoặc TẤT CẢ) các từ khóa cấu hình được chọn.
+      // Ở đây dùng thuật toán TẤT CẢ (AND) để lọc càng chọn nhiều càng chính xác.
+      matchSpecs = activeSpecFilters.every(filterKeyword => rawSpecsStr.includes(filterKeyword));
+    }
+
+    return matchCategory && matchSearch && matchSpecs;
   });
 
-  // Tự động điều chỉnh Tiêu đề trang dựa trên ngữ cảnh
   const getCategoryTitle = () => {
     if (searchKeyword) return `Kết quả tìm kiếm: "${searchKeyword}"`;
-    
     switch (categoryParam) {
       case 'pc': return 'Thiết bị máy tính';
       case 'components': return 'Linh kiện, thiết bị ngoại vi';
@@ -94,18 +127,53 @@ export default function Products() {
     <div className="bg-gray-50 min-h-screen py-12 px-4 md:px-12">
       <div className="max-w-screen-2xl mx-auto">
         
-        <div className="mb-10 text-center md:text-left border-b border-gray-200 pb-6">
+        <div className="mb-6 text-center md:text-left">
           <h1 className="text-3xl font-extrabold text-[#16223f] uppercase">{getCategoryTitle()}</h1>
-          <p className="text-gray-500 mt-2">Hiển thị {filteredProducts.length} sản phẩm phù hợp</p>
         </div>
 
+        {/* ================= KHU VỰC LỌC CẤU HÌNH NHANH (TGDD STYLE) ================= */}
+        <div className="mb-10 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <p className="text-sm font-bold text-gray-700 mb-3">Lọc theo cấu hình:</p>
+          <div className="flex flex-wrap gap-3">
+            {QUICK_FILTERS.map((filter, index) => {
+              const isActive = activeSpecFilters.includes(filter.keyword);
+              return (
+                <button
+                  key={index}
+                  onClick={() => toggleSpecFilter(filter.keyword)}
+                  className={`px-4 py-2 text-sm font-medium border rounded-lg transition-all duration-200 
+                    ${isActive 
+                      ? 'border-[#f26522] bg-orange-50 text-[#f26522] shadow-sm' 
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                >
+                  {filter.label}
+                  {isActive && <span className="ml-2 font-bold text-[#f26522]">✓</span>}
+                </button>
+              );
+            })}
+            
+            {/* Nút Xóa Lọc */}
+            {activeSpecFilters.length > 0 && (
+              <button 
+                onClick={() => setActiveSpecFilters([])}
+                className="px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-auto"
+              >
+                ✕ Xóa bộ lọc
+              </button>
+            )}
+          </div>
+          <p className="text-gray-500 mt-4 text-sm">Tìm thấy <strong>{filteredProducts.length}</strong> sản phẩm phù hợp</p>
+        </div>
+
+        {/* ================= LƯỚI HIỂN THỊ SẢN PHẨM ================= */}
         {isLoading ? (
           <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#f26522]"></div></div>
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
             <div className="text-6xl mb-4">🔍</div>
             <h3 className="text-xl font-bold text-gray-800">Không tìm thấy sản phẩm nào</h3>
-            <p className="text-gray-500 mt-2">Vui lòng thử lại với từ khóa khác.</p>
+            <p className="text-gray-500 mt-2">Vui lòng thử bỏ bớt bộ lọc cấu hình hoặc dùng từ khóa khác.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
