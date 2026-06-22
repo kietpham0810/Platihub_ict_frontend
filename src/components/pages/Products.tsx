@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom'; // 🌟 Đã thêm { Link }
+import { useSearchParams, Link } from 'react-router-dom';
 import { API_CONFIG, buildApiUrl } from '../../constants/config';
 
 interface Product {
@@ -18,6 +18,7 @@ export default function Products() {
   
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
+  const searchKeyword = searchParams.get('search'); // Bắt từ khóa từ Header truyền sang
 
   useEffect(() => {
     const fetchApprovedProducts = async () => {
@@ -41,18 +42,36 @@ export default function Products() {
     fetchApprovedProducts();
   }, []);
 
+  // Bộ máy lọc kép: Chạy qua phễu Danh mục, sau đó chạy qua phễu Tìm kiếm
   const filteredProducts = products.filter(product => {
-    if (!categoryParam) return true; 
-    switch (categoryParam) {
-      case 'pc': return product.product_type === 'Thiết bị máy tính';
-      case 'components': return product.product_type === 'Linh kiện';
-      case 'mobile': return product.product_type === 'Điện thoại, thiết bị thông minh';
-      case 'solutions': return product.product_type === 'Giải pháp CNTT';
-      default: return true;
+    // 1. Lọc theo Category (Nếu có)
+    let matchCategory = true;
+    if (categoryParam) {
+      switch (categoryParam) {
+        case 'pc': matchCategory = product.product_type === 'Thiết bị máy tính'; break;
+        case 'components': matchCategory = product.product_type === 'Linh kiện'; break;
+        case 'mobile': matchCategory = product.product_type === 'Điện thoại, thiết bị thông minh'; break;
+        case 'solutions': matchCategory = product.product_type === 'Giải pháp CNTT'; break;
+        default: matchCategory = true;
+      }
     }
+
+    // 2. Lọc theo từ khóa Search (Nếu có)
+    let matchSearch = true;
+    if (searchKeyword) {
+      const lowerKeyword = searchKeyword.toLowerCase();
+      matchSearch = 
+        (product.product_name && product.product_name.toLowerCase().includes(lowerKeyword)) ||
+        (product.manufacturer && product.manufacturer.toLowerCase().includes(lowerKeyword));
+    }
+
+    return matchCategory && matchSearch;
   });
 
+  // Tự động điều chỉnh Tiêu đề trang dựa trên ngữ cảnh
   const getCategoryTitle = () => {
+    if (searchKeyword) return `Kết quả tìm kiếm: "${searchKeyword}"`;
+    
     switch (categoryParam) {
       case 'pc': return 'Thiết bị máy tính';
       case 'components': return 'Linh kiện, thiết bị ngoại vi';
@@ -77,14 +96,16 @@ export default function Products() {
         
         <div className="mb-10 text-center md:text-left border-b border-gray-200 pb-6">
           <h1 className="text-3xl font-extrabold text-[#16223f] uppercase">{getCategoryTitle()}</h1>
-          <p className="text-gray-500 mt-2">Hiển thị {filteredProducts.length} sản phẩm</p>
+          <p className="text-gray-500 mt-2">Hiển thị {filteredProducts.length} sản phẩm phù hợp</p>
         </div>
 
         {isLoading ? (
           <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#f26522]"></div></div>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-100">
-            <h3 className="text-xl font-bold text-gray-400">Chưa có sản phẩm nào</h3>
+          <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
+            <div className="text-6xl mb-4">🔍</div>
+            <h3 className="text-xl font-bold text-gray-800">Không tìm thấy sản phẩm nào</h3>
+            <p className="text-gray-500 mt-2">Vui lòng thử lại với từ khóa khác.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -96,7 +117,6 @@ export default function Products() {
                 <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col hover:shadow-lg transition-all duration-300">
                   <div className="relative h-56 p-4 flex items-center justify-center bg-white border-b border-gray-50">
                     <img src={product.image_url} alt={product.product_name} className="max-h-full object-contain" />
-                    {/* 🌟 Hiển thị lại Nhà sản xuất dạng tag */}
                     <span className="absolute top-3 left-3 bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">
                       {product.manufacturer}
                     </span>

@@ -131,8 +131,29 @@ export default function Header() {
 
           <div className="hidden md:flex flex-1 max-w-lg ml-auto justify-end">
             <div className="relative w-full max-w-md" ref={searchContainerRef}>
-              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => searchQuery.trim().length > 0 && setShowSuggestions(true)} placeholder={i18n.language === 'vn' ? 'Tìm kiếm linh kiện, máy tính...' : 'Search...'} className="w-full bg-white text-gray-700 rounded-full py-2.5 pl-6 pr-12 focus:outline-none focus:ring-2 focus:ring-[#f26522] border border-gray-300 transition-all shadow-sm" />
-              <button className="absolute right-1 top-1/2 transform -translate-y-1/2 p-2 bg-gray-300 hover:bg-[#f26522] text-white rounded-full transition-colors flex items-center justify-center">
+              <input 
+                type="text" 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+                onFocus={() => searchQuery.trim().length > 0 && setShowSuggestions(true)} 
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    setShowSuggestions(false);
+                    navigate(`/san-pham?search=${encodeURIComponent(searchQuery.trim())}`);
+                  }
+                }}
+                placeholder={i18n.language === 'vn' ? 'Tìm kiếm linh kiện, máy tính...' : 'Search...'} 
+                className="w-full bg-white text-gray-700 rounded-full py-2.5 pl-6 pr-12 focus:outline-none focus:ring-2 focus:ring-[#f26522] border border-gray-300 transition-all shadow-sm" 
+              />
+              <button 
+                onClick={() => {
+                  if (searchQuery.trim()) {
+                    setShowSuggestions(false);
+                    navigate(`/san-pham?search=${encodeURIComponent(searchQuery.trim())}`);
+                  }
+                }}
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 p-2 bg-gray-300 hover:bg-[#f26522] text-white rounded-full transition-colors flex items-center justify-center"
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </button>
 
@@ -146,7 +167,11 @@ export default function Header() {
                       <ul className="max-h-[350px] overflow-y-auto">
                         {searchResults.map((item) => (
                           <li key={item.id} className="border-b border-gray-50 last:border-0">
-                            <Link to={`/san-pham`} onClick={() => { setShowSuggestions(false); setSearchQuery(''); }} className="flex items-center px-4 py-3 hover:bg-orange-50 transition-colors group">
+                            <Link 
+                              to={`/product/${item.id}`} 
+                              onClick={() => { setShowSuggestions(false); setSearchQuery(''); }} 
+                              className="flex items-center px-4 py-3 hover:bg-orange-50 transition-colors group"
+                            >
                               <div className="h-12 w-12 bg-white border border-gray-100 rounded-md overflow-hidden shrink-0">
                                 <img src={item.image_url || 'https://via.placeholder.com/50'} alt={item.product_name} className="w-full h-full object-cover" />
                               </div>
@@ -154,16 +179,22 @@ export default function Header() {
                                 <h4 className="text-sm font-bold text-gray-800 group-hover:text-[#f26522] line-clamp-1">{item.product_name}</h4>
                                 <div className="flex items-center justify-between mt-1">
                                   <span className="text-[10px] uppercase font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-sm">{item.product_type}</span>
-                                  <span className="text-sm font-black text-[#f26522]">Liên hệ</span>
+                                  <span className="text-sm font-black text-[#f26522]">Chi tiết &rarr;</span>
                                 </div>
                               </div>
                             </Link>
                           </li>
                         ))}
                       </ul>
-                      <Link to={`/san-pham`} onClick={() => setShowSuggestions(false)} className="block w-full bg-gray-50 hover:bg-gray-100 text-center py-3 text-sm font-bold text-[#16223f] transition-colors border-t border-gray-100">
+                      <button 
+                        onClick={() => {
+                          setShowSuggestions(false);
+                          navigate(`/san-pham?search=${encodeURIComponent(searchQuery.trim())}`);
+                        }} 
+                        className="block w-full bg-gray-50 hover:bg-gray-100 text-center py-3 text-sm font-bold text-[#16223f] transition-colors border-t border-gray-100"
+                      >
                         Xem tất cả kết quả cho "{searchQuery}" &rarr;
-                      </Link>
+                      </button>
                     </div>
                   )}
                 </div>
