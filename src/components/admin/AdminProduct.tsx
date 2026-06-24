@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { API_CONFIG, buildApiUrl } from '../../constants/config';
+import AdminProductTable from './AdminProductTable.tsx';
+import AdminProductManual from './AdminProductManual.tsx';
 
-interface Product {
+export interface Product {
   id: string;
   product_name: string;
   image_url: string;
@@ -10,11 +12,11 @@ interface Product {
   product_type: string;
   price?: number | null;
   is_price_visible?: number;
-  specifications?: any; 
+  specifications?: any;
   created_at?: string;
 }
 
-interface SpecField {
+export interface SpecField {
   key: string;
   value: string;
 }
@@ -309,50 +311,22 @@ export default function AdminProduct() {
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-[1400px] mx-auto bg-white rounded-xl shadow-md overflow-hidden relative">
         
-        {/* ================= TABS NAVIGATION & AI CONTROL PANEL ================= */}
-        <div className="border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row md:items-center md:justify-between pr-6">
-          <div className="flex flex-1">
-            <button onClick={() => setActiveTab('review')} className={`flex-1 py-4 text-center font-bold text-sm md:text-base uppercase tracking-wide transition-colors ${activeTab === 'review' ? 'bg-white text-blue-700 border-t-4 border-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}>
-              Chờ Duyệt ({pendingProducts.length})
-            </button>
-            <button onClick={() => setActiveTab('manage')} className={`flex-1 py-4 text-center font-bold text-sm md:text-base uppercase tracking-wide transition-colors ${activeTab === 'manage' ? 'bg-white text-emerald-600 border-t-4 border-emerald-600' : 'text-gray-500 hover:bg-gray-100'}`}>
-              Quản lý Sản Phẩm ({approvedProducts.length})
-            </button>
-            <button onClick={() => setActiveTab('manual')} className={`flex-1 py-4 text-center font-bold text-sm md:text-base uppercase tracking-wide transition-colors ${activeTab === 'manual' ? 'bg-white text-[#f26522] border-t-4 border-[#f26522]' : 'text-gray-500 hover:bg-gray-100'}`}>
-              Đăng Thủ Công
-            </button>
-          </div>
-          
-          {/* 🤖 BẢNG ĐIỀU KHIỂN BOT CÀO DỮ LIỆU TỰ ĐỘNG CHUYÊN NGHIỆP */}
-          <div className="p-3 md:p-0 flex flex-col md:flex-row items-center gap-3 justify-end md:ml-4">
-            
-            <div className="w-full md:w-64">
-                <input 
-                    type="url" 
-                    placeholder="Dán link Hoàng Hà PC vào đây..." 
-                    value={crawlUrl}
-                    onChange={(e) => setCrawlUrl(e.target.value)}
-                    className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                />
-            </div>
-
-            {botReport && (
-              <div className="text-right hidden xl:block shrink-0">
-                <p className="text-[11px] text-green-600 font-bold">✨ Tìm thấy {botReport.total_links_found} mục</p>
-                <p className="text-[10px] text-gray-400">Thêm mới: {botReport.new_inserted} | Cập nhật: {botReport.updated_specifications}</p>
-              </div>
-            )}
-            
-            <button 
-              onClick={handleRunBot} 
-              disabled={isBotRunning}
-              className={`shrink-0 px-4 py-2 rounded-lg font-bold text-xs md:text-sm shadow flex items-center gap-2 transition-all ${isBotRunning ? 'bg-gray-200 text-gray-400 cursor-not-allowed animate-pulse' : 'bg-gradient-to-r from-blue-700 to-indigo-700 text-white hover:from-blue-800'}`}
-            >
-              <span>{isBotRunning ? '⚙️' : '🤖'}</span>
-              {isBotRunning ? 'Đang Quét...' : 'Quét Link Này'}
-            </button>
-          </div>
-        </div>
+        <AdminProductTable
+          activeTab={activeTab}
+          pendingProducts={pendingProducts}
+          approvedProducts={approvedProducts}
+          selectedIds={selectedIds}
+          isLoading={isLoading}
+          botReport={botReport}
+          isBotRunning={isBotRunning}
+          crawlUrl={crawlUrl}
+          setActiveTab={setActiveTab}
+          setSelectedIds={setSelectedIds}
+          setConfirmDialog={setConfirmDialog}
+          openEditModal={openEditModal}
+          handleRunBot={handleRunBot}
+          toggleSelect={toggleSelect}
+        />
 
         <div className="p-8">
           
@@ -480,112 +454,19 @@ export default function AdminProduct() {
 
           {/* TAB 3: ĐĂNG THỦ CÔNG */}
           {activeTab === 'manual' && (
-            <form className="max-w-4xl mx-auto space-y-6" onSubmit={handleManualSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Tên sản phẩm *</label>
-                  <input type="text" required value={formData.product_name} onChange={e => setFormData({...formData, product_name: e.target.value})} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522]" />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Nhà sản xuất *</label>
-                  <input type="text" required value={formData.manufacturer} onChange={e => setFormData({...formData, manufacturer: e.target.value})} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522]" />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Phân loại *</label>
-                  <select required value={formData.product_type} onChange={e => setFormData({...formData, product_type: e.target.value})} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522] bg-white">
-                    <option value="">-- Chọn phân loại --</option>
-                    <option value="Thiết bị máy tính">Thiết bị máy tính</option>
-                    <option value="Linh kiện">Linh kiện</option>
-                    <option value="Phần mềm">Phần mềm</option>
-                  </select>
-                </div>
-                
-                <div className="flex flex-col">
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-sm font-bold text-gray-700">Hình ảnh sản phẩm *</label>
-                    <div className="flex bg-gray-200 rounded p-1">
-                      <button type="button" onClick={() => setImageInputMode('url')} className={`px-3 py-1 text-xs font-bold rounded ${imageInputMode === 'url' ? 'bg-white text-[#f26522] shadow' : 'text-gray-600 hover:bg-gray-300'}`}>Nhập URL</button>
-                      <button type="button" onClick={() => setImageInputMode('upload')} className={`px-3 py-1 text-xs font-bold rounded ${imageInputMode === 'upload' ? 'bg-white text-[#f26522] shadow' : 'text-gray-600 hover:bg-gray-300'}`}>Tải file lên</button>
-                    </div>
-                  </div>
-
-                  {imageInputMode === 'url' ? (
-                    <div className="flex gap-3 items-start">
-                      <input type="url" required placeholder="https://..." value={formData.image_url} onChange={e => setFormData({...formData, image_url: e.target.value})} className="flex-1 border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522]" />
-                      {formData.image_url && (
-                        <div className="w-12 h-12 flex-shrink-0 border border-gray-200 rounded overflow-hidden bg-gray-50 shadow-sm">
-                          <img 
-                            src={formData.image_url} 
-                            alt="Preview" 
-                            className="w-full h-full object-cover" 
-                            onError={(e) => { 
-                              const target = e.target as HTMLImageElement; 
-                              target.onerror = null; 
-                              target.src = 'https://placehold.co/400x300/f8f9fa/a1a1aa?text=No+Image'; 
-                            }} 
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition-colors">
-                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="image-upload" />
-                      <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center justify-center">
-                        <span className="text-2xl mb-2">📁</span>
-                        <span className="text-sm text-gray-600 font-semibold">Nhấn để chọn ảnh từ máy</span>
-                      </label>
-                      {isUploadingImage && <p className="text-sm text-blue-600 mt-2 font-bold animate-pulse">Đang tải ảnh lên máy chủ Cloud...</p>}
-                      {formData.image_url && imageInputMode === 'upload' && !isUploadingImage && (
-                        <div className="mt-2 flex flex-col items-center">
-                          <img 
-                            src={formData.image_url} 
-                            alt="Preview" 
-                            className="h-16 w-16 object-cover rounded border border-gray-200 mb-1" 
-                            onError={(e) => { 
-                              const target = e.target as HTMLImageElement; 
-                              target.onerror = null; 
-                              target.src = 'https://placehold.co/400x300/f8f9fa/a1a1aa?text=No+Image'; 
-                            }} 
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Mô tả sản phẩm</label>
-                <textarea rows={4} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522] resize-y"></textarea>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-5 bg-gray-50">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-bold text-gray-800">Thông số kỹ thuật (Tùy chọn)</h4>
-                  <button type="button" onClick={addSpecField} className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded text-sm font-bold transition-colors">+ Thêm thông số</button>
-                </div>
-                {specs.length === 0 ? (
-                  <p className="text-sm text-gray-500 italic">Chưa có thông số nào.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {specs.map((spec, index) => (
-                      <div key={index} className="flex gap-3">
-                        <input type="text" placeholder="Tên (VD: RAM)" value={spec.key} onChange={(e) => handleSpecChange(index, 'key', e.target.value)} className="w-1/3 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#f26522]" />
-                        <input type="text" placeholder="Giá trị" value={spec.value} onChange={(e) => handleSpecChange(index, 'value', e.target.value)} className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#f26522]" />
-                        <button type="button" onClick={() => removeSpecField(index)} className="bg-red-50 text-red-500 hover:bg-red-100 px-3 py-2 rounded">✕</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-4 text-right">
-                <button type="submit" disabled={isUploadingImage} className={`font-bold py-3 px-8 rounded shadow-md transition-colors ${isUploadingImage ? 'bg-gray-400 cursor-not-allowed text-gray-200' : 'bg-[#f26522] hover:bg-[#d9531e] text-white'}`}>Xuất bản Sản phẩm</button>
-              </div>
-            </form>
+            <AdminProductManual
+              formData={formData}
+              imageInputMode={imageInputMode}
+              isUploadingImage={isUploadingImage}
+              specs={specs}
+              setFormData={setFormData}
+              setImageInputMode={setImageInputMode}
+              handleImageUpload={handleImageUpload}
+              addSpecField={addSpecField}
+              removeSpecField={removeSpecField}
+              handleSpecChange={handleSpecChange}
+              handleManualSubmit={handleManualSubmit}
+            />
           )}
         </div>
 
