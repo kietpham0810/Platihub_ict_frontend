@@ -51,7 +51,7 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
     <div 
       onTransitionEnd={handleTransitionEnd}
       // Đã đổi z-50 thành z-[70] để đè lên Header (z-[60])
-      className={`fixed inset-0 z-[70] bg-white text-slate-900 overflow-y-auto w-full h-screen transition-all duration-300 ease-out transform ${
+      className={`fixed inset-0 z-[70] bg-white text-slate-900 overflow-y-auto w-full h-screen transition-all duration-300 ease-out transform shadow-2xl ring-1 ring-slate-100 ${
         isAnimating ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-10 pointer-events-none'
       }`}
     >
@@ -83,13 +83,13 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
 
       <div className="px-6 py-10 md:px-12 max-w-screen-2xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
         
-        <div className={`transition-all duration-500 delay-100 ${isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          <h3 className="text-slate-500 font-bold uppercase mb-6 tracking-widest text-sm">
+        <div className={`transition-all duration-500 delay-100 ${isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} bg-slate-50/80 border border-slate-200 rounded-[28px] p-8 shadow-sm`}> 
+          <h3 className="text-slate-500 font-bold uppercase mb-6 tracking-widest text-sm border-b border-slate-200 pb-4">
             {t('menu.about')}
           </h3>
-          <ul className="space-y-4">
+          <ul className="space-y-3">
             <li>
-              <Link to="/" onClick={onClose} className="flex items-center gap-3 text-slate-700 hover:text-[#f26522] transition-colors group">
+              <Link to="/" onClick={onClose} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-slate-700 hover:text-[#f26522] hover:bg-white transition-all group">
                 <span className="text-[#f26522] font-bold text-lg transition-transform group-hover:translate-x-1">›</span> 
                 {t('menu.about')}
               </Link>
@@ -97,47 +97,49 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
           </ul>
         </div>
 
-        <div className={`flex flex-col gap-12 transition-all duration-500 delay-200 ${isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          <div>
-            <h3 className="text-slate-500 font-bold uppercase mb-6 tracking-widest text-sm">
-              {t('menu.news')}
-            </h3>
-            <ul className="space-y-4">
-              <li>
-                <Link to="/khuyen-mai" onClick={onClose} className="flex items-center gap-3 text-slate-700 hover:text-[#f26522] transition-colors group">
-                  <span className="text-[#f26522] font-bold text-lg transition-transform group-hover:translate-x-1">›</span> 
-                  {t('menu.promotion')}
-                </Link>
-              </li>
-            </ul>
-          </div>
+        <div className={`transition-all duration-500 delay-200 ${isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} bg-slate-50/80 border border-slate-200 rounded-[28px] p-8 shadow-sm`}> 
+          <div className="space-y-8">
+            <div>
+              <h3 className="text-slate-500 font-bold uppercase mb-6 tracking-widest text-sm border-b border-slate-200 pb-4">
+                {t('menu.news')}
+              </h3>
+              <ul className="space-y-3">
+                <li>
+                  <Link to="/khuyen-mai" onClick={onClose} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-slate-700 hover:text-[#f26522] hover:bg-white transition-all group">
+                    <span className="text-[#f26522] font-bold text-lg transition-transform group-hover:translate-x-1">›</span> 
+                    {t('menu.promotion')}
+                  </Link>
+                </li>
+              </ul>
+            </div>
 
-          <div>
-            <h3 className="text-slate-500 font-bold uppercase mb-6 tracking-widest text-sm">
-              {t('menu.contact')}
-            </h3>
-            <ul className="space-y-4">
-              <li>
-                <Link to="/lien-he" onClick={onClose} className="flex items-center gap-3 text-slate-700 hover:text-[#f26522] transition-colors group">
-                  <span className="text-[#f26522] font-bold text-lg transition-transform group-hover:translate-x-1">›</span> 
-                  {t('menu.contact')}
-                </Link>
-              </li>
-            </ul>
+            <div>
+              <h3 className="text-slate-500 font-bold uppercase mb-6 tracking-widest text-sm border-b border-slate-200 pb-4">
+                {t('menu.contact')}
+              </h3>
+              <ul className="space-y-3">
+                <li>
+                  <Link to="/lien-he" onClick={onClose} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-slate-700 hover:text-[#f26522] hover:bg-white transition-all group">
+                    <span className="text-[#f26522] font-bold text-lg transition-transform group-hover:translate-x-1">›</span> 
+                    {t('menu.contact')}
+                  </Link>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
 
-        <div className={`transition-all duration-500 delay-300 ${isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          <h3 className="text-slate-900 font-bold uppercase mb-6 tracking-widest text-sm">
+        <div className={`transition-all duration-500 delay-300 ${isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} bg-slate-50/80 border border-slate-200 rounded-[28px] p-8 shadow-sm`}> 
+          <h3 className="text-slate-900 font-bold uppercase mb-6 tracking-widest text-sm border-b border-slate-200 pb-4">
             {t('menu.products')}
           </h3>
-          <ul className="space-y-4">
+          <ul className="space-y-3">
             {productCategories.map((item, idx) => (
               <li key={idx}>
                 <Link 
                   to={item.path}
                   onClick={onClose}
-                  className="flex items-center gap-3 text-slate-700 hover:text-[#f26522] transition-colors group text-sm"
+                  className="flex items-center gap-3 rounded-2xl px-4 py-3 text-slate-700 hover:text-[#f26522] hover:bg-white transition-all group text-sm"
                 >
                   <span className="text-[#f26522] font-bold text-lg transition-transform group-hover:translate-x-1">›</span> 
                   {item.name}
@@ -147,15 +149,15 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
           </ul>
         </div>
 
-        <div className={`transition-all duration-500 delay-400 ${isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+        <div className={`transition-all duration-500 delay-400 ${isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} bg-slate-50/80 border border-slate-200 rounded-[28px] p-8 shadow-sm`}> 
           <div className="flex flex-col gap-4">
             
             <button 
               onClick={() => changeLanguage('vn')}
-              className={`flex items-center gap-4 w-32 px-4 py-3 rounded border transition-all group ${
+              className={`flex items-center gap-4 w-32 px-4 py-3 rounded-xl border transition-all group ${
                 i18n.language === 'vn'
                   ? 'bg-[#f26522] border-[#f26522] text-white shadow-lg'
-                  : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
               }`}
             >
               <span className={`font-bold text-lg transition-transform group-hover:translate-x-1 ${i18n.language === 'vn' ? 'text-white' : 'text-slate-400'}`}>›</span> 
@@ -164,10 +166,10 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
             
             <button 
               onClick={() => changeLanguage('en')}
-              className={`flex items-center gap-4 w-32 px-4 py-3 rounded border transition-all group ${
+              className={`flex items-center gap-4 w-32 px-4 py-3 rounded-xl border transition-all group ${
                 i18n.language === 'en'
                   ? 'bg-[#f26522] border-[#f26522] text-white shadow-lg'
-                  : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
               }`}
             >
               <span className={`font-bold text-lg transition-transform group-hover:translate-x-1 ${i18n.language === 'en' ? 'text-white' : 'text-slate-400'}`}>›</span> 
