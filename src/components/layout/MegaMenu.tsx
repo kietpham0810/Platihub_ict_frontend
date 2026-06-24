@@ -50,13 +50,12 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
   return (
     <div 
       onTransitionEnd={handleTransitionEnd}
-      // Đã đổi z-50 thành z-[70] để đè lên Header (z-[60])
-      className={`fixed inset-0 z-[70] bg-white text-slate-900 overflow-y-auto w-full h-screen transition-all duration-300 ease-out transform shadow-2xl ring-1 ring-slate-100 ${
+      className={`fixed inset-0 z-[70] bg-white/95 text-slate-900 overflow-y-auto w-full h-screen transition-all duration-300 ease-out transform shadow-2xl ring-1 ring-slate-100 backdrop-blur-sm ${
         isAnimating ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-10 pointer-events-none'
       }`}
     >
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center px-6 py-6 md:px-12 border-b border-slate-200/70 bg-white/90 backdrop-blur">
-        <div className="flex items-center gap-4 md:gap-6">
+        <div className="flex flex-col gap-4 md:gap-6">
           <Link
             to="/"
             onClick={onClose}
@@ -68,16 +67,15 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
               className="h-16 md:h-20 w-auto object-contain opacity-95"
               style={{ filter: 'contrast(1.1)' }}
             />
-            <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-slate-500">Platihub</p>
-              <h2 className="text-xl md:text-2xl font-bold text-slate-900">Menu</h2>
-            </div>
           </Link>
+          <p className="max-w-xl text-sm text-slate-500 md:text-base">
+            Khám phá nhanh các danh mục, tin tức và hỗ trợ ngay trong một menu thiết kế hiện đại, sáng sủa.
+          </p>
         </div>
 
         <button
           onClick={onClose}
-          className="mt-4 md:mt-0 w-12 h-12 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-md transition-colors"
+          className="mt-4 md:mt-0 w-12 h-12 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-xl transition-all duration-300"
           aria-label="Close menu"
         >
           ✕
@@ -163,7 +161,7 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
               className={`flex items-center justify-between gap-3 w-full rounded-2xl border px-4 py-3 transition-all duration-300 ${
                 i18n.language === 'vn'
                   ? 'bg-[#f26522] border-[#f26522] text-white shadow-lg'
-                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:-translate-y-0.5'
               }`}
             >
               <span className={`font-semibold ${i18n.language === 'vn' ? 'text-white' : 'text-slate-700'}`}>Tiếng Việt</span>
@@ -175,7 +173,7 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
               className={`flex items-center justify-between gap-3 w-full rounded-2xl border px-4 py-3 transition-all duration-300 ${
                 i18n.language === 'en'
                   ? 'bg-[#f26522] border-[#f26522] text-white shadow-lg'
-                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:-translate-y-0.5'
               }`}
             >
               <span className={`font-semibold ${i18n.language === 'en' ? 'text-white' : 'text-slate-700'}`}>English</span>
