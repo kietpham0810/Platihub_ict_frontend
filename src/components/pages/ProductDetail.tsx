@@ -21,6 +21,7 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isContactModalOpen, setIsContactModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchProductDetail = async () => {
@@ -124,10 +125,7 @@ export default function ProductDetail() {
             </div>
 
             <div className="flex gap-4 mt-auto">
-              <button className="flex-1 bg-[#f26522] hover:bg-[#d9531e] text-white font-bold py-4 px-6 rounded-lg shadow-md transition-all hover:shadow-lg flex items-center justify-center gap-2">
-                <span>🛒</span> THÊM VÀO GIỎ HÀNG
-              </button>
-              <button className="flex-1 bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 px-6 rounded-lg shadow-md transition-all flex items-center justify-center gap-2">
+              <button onClick={() => setIsContactModalOpen(true)} className="flex-1 bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 px-6 rounded-lg shadow-md transition-all flex items-center justify-center gap-2">
                 <span>📞</span> GỌI TƯ VẤN
               </button>
             </div>
@@ -161,6 +159,50 @@ export default function ProductDetail() {
         )}
 
       </div>
+
+      {isContactModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsContactModalOpen(false)}></div>
+          <div className="relative bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-gray-200 overflow-hidden animate-fade-in-up">
+            <div className="flex justify-between items-center px-6 py-5 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Liên hệ CSKH</h2>
+                <p className="text-sm text-gray-500">Thông tin hỗ trợ khách hàng Platihub</p>
+              </div>
+              <button onClick={() => setIsContactModalOpen(false)} className="text-gray-400 hover:text-gray-800 transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div className="rounded-3xl bg-slate-50 p-5 border border-slate-200">
+                <p className="text-sm uppercase tracking-[0.25em] text-slate-500 font-semibold mb-2">Địa chỉ</p>
+                <p className="text-base text-slate-700">159C De Tham Street, Cau Ong Lanh Ward, Ho Chi Minh City, Vietnam</p>
+              </div>
+
+              <div className="rounded-3xl bg-slate-50 p-5 border border-slate-200">
+                <p className="text-sm uppercase tracking-[0.25em] text-slate-500 font-semibold mb-2">Email</p>
+                <div className="space-y-2 text-slate-700 text-sm">
+                  <a href="mailto:software@platihub.com" className="text-[#f26522] hover:underline">software@platihub.com</a>
+                  <a href="mailto:ict@platihub.com" className="text-[#f26522] hover:underline">ict@platihub.com</a>
+                  <a href="mailto:hr@platihub.com" className="text-[#f26522] hover:underline">hr@platihub.com</a>
+                </div>
+              </div>
+
+              <div className="rounded-3xl bg-slate-50 p-5 border border-slate-200">
+                <p className="text-sm uppercase tracking-[0.25em] text-slate-500 font-semibold mb-2">Điện thoại</p>
+                <a href="tel:+84918227719" className="text-base font-semibold text-slate-900 hover:text-[#f26522]">+84 918 227 719</a>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 text-right">
+              <button onClick={() => setIsContactModalOpen(false)} className="inline-flex items-center justify-center rounded-full border border-gray-200 px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors">
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
