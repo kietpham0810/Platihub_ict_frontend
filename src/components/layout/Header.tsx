@@ -13,6 +13,7 @@ interface SearchResult {
   description: string;
   manufacturer: string;
   product_type: string;
+  specifications?: any;
 }
 
 export default function Header() {
@@ -70,24 +71,43 @@ export default function Header() {
 
   // LỌC DỮ LIỆU TỐC ĐỘ CAO
   useEffect(() => {
-    if (searchQuery.trim().length === 0) {
+    const trimmedQuery = searchQuery.trim();
+    if (trimmedQuery.length === 0) {
       setSearchResults([]);
       setShowSuggestions(false);
       return;
     }
 
     setShowSuggestions(true);
-    const query = searchQuery.toLowerCase();
-    
-    const filtered = globalProducts.filter(p => {
-      const safeName = p.product_name ? p.product_name.toLowerCase() : '';
-      const safeCategory = p.product_type ? p.product_type.toLowerCase() : '';
-      const safeManufacturer = p.manufacturer ? p.manufacturer.toLowerCase() : '';
-      
-      return safeName.includes(query) || safeCategory.includes(query) || safeManufacturer.includes(query);
-    });
-    
-    setSearchResults(filtered.slice(0, 5));
+    const query = trimmedQuery.toLowerCase();
+    const terms = query.split(/\s+/).filter(Boolean);
+
+    const scoredProducts = globalProducts
+      .map(p => {
+        const name = p.product_name ? p.product_name.toLowerCase() : '';
+        const category = p.product_type ? p.product_type.toLowerCase() : '';
+        const manufacturer = p.manufacturer ? p.manufacturer.toLowerCase() : '';
+        const description = p.description ? p.description.toLowerCase() : '';
+        const specs = (p as any).specifications ? String((p as any).specifications).toLowerCase() : '';
+        const haystack = `${name} ${category} ${manufacturer} ${description} ${specs}`;
+
+        let score = 0;
+        if (haystack.includes(query)) score += 20;
+
+        terms.forEach(term => {
+          if (name.includes(term)) score += 10;
+          if (manufacturer.includes(term)) score += 8;
+          if (specs.includes(term)) score += 7;
+          if (category.includes(term)) score += 5;
+          if (description.includes(term)) score += 4;
+        });
+
+        return { product: p, score };
+      })
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score || a.product.product_name.localeCompare(b.product.product_name));
+
+    setSearchResults(scoredProducts.slice(0, 5).map(item => item.product));
   }, [searchQuery, globalProducts]);
 
   useEffect(() => {
@@ -99,6 +119,37 @@ export default function Header() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const highlightTerms = (text: string, terms: string[]) => {
+    if (!text || terms.length === 0) return text;
+    const regex = new RegExp(`(${terms.map(escapeRegExp).join('|')})`, 'gi');
+    return text.split(regex).map((part, idx) => (
+      regex.test(part)
+        ? <span key={idx} className="bg-[#fff2df] text-[#c45d0f] font-semibold">{part}</span>
+        : <span key={idx}>{part}</span>
+    ));
+  };
+
+  const getSuggestionSnippet = (item: SearchResult, terms: string[]) => {
+    const fields = [
+      item.product_type,
+      item.manufacturer,
+      item.description,
+      (item as any).specifications ? String((item as any).specifications) : ''
+    ];
+
+    const haystack = fields.find(field => {
+      if (!field) return false;
+      const lowerField = field.toLowerCase();
+      return terms.some(term => lowerField.includes(term));
+    });
+
+    if (!haystack) return item.product_type || item.manufacturer || '';
+    const snippet = haystack.length > 120 ? `${haystack.slice(0, 117)}...` : haystack;
+    return highlightTerms(snippet, terms);
+  };
 
   return (
     <header className={`relative w-full flex flex-col pt-[84px] ${isHomePage ? 'h-screen min-h-[600px]' : ''}`}>
@@ -163,35 +214,49 @@ export default function Header() {
                     <div className="flex flex-col">
                       <div className="px-4 py-2 bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">Gợi ý sản phẩm</div>
                       <ul className="max-h-[350px] overflow-y-auto">
-                        {searchResults.map((item) => (
-                          <li key={item.id} className="border-b border-gray-50 last:border-0">
-                            <Link 
-                              to={`/product/${item.id}`} 
-                              onClick={() => { setShowSuggestions(false); setSearchQuery(''); }} 
-                              className="flex items-center px-4 py-3 hover:bg-orange-50 transition-colors group"
-                            >
-                              <div className="h-12 w-12 bg-white border border-gray-100 rounded-md overflow-hidden shrink-0">
-                                <img 
-                                  src={item.image_url || 'https://placehold.co/50x50/f8f9fa/a1a1aa?text=No+Image'} 
-                                  alt={item.product_name} 
-                                  className="w-full h-full object-cover" 
-                                  onError={(e) => { 
-                                    const target = e.target as HTMLImageElement; 
-                                    target.onerror = null; 
-                                    target.src = 'https://placehold.co/50x50/f8f9fa/a1a1aa?text=No+Image'; 
-                                  }} 
-                                />
-                              </div>
-                              <div className="ml-4 flex-1 flex flex-col justify-center">
-                                <h4 className="text-sm font-bold text-gray-800 group-hover:text-[#f26522] line-clamp-1">{item.product_name}</h4>
-                                <div className="flex items-center justify-between mt-1">
-                                  <span className="text-[10px] uppercase font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-sm">{item.product_type}</span>
-                                  <span className="text-sm font-black text-[#f26522]">Chi tiết &rarr;</span>
+                        {searchResults.map((item, index) => {
+                          const terms = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+                          return (
+                            <li key={item.id} className="border-b border-gray-50 last:border-0">
+                              <Link 
+                                to={`/product/${item.id}`} 
+                                onClick={() => { setShowSuggestions(false); setSearchQuery(''); }} 
+                                className="flex items-center px-4 py-3 hover:bg-orange-50 transition-colors group"
+                              >
+                                <div className="h-12 w-12 bg-white border border-gray-100 rounded-md overflow-hidden shrink-0">
+                                  <img 
+                                    src={item.image_url || 'https://placehold.co/50x50/f8f9fa/a1a1aa?text=No+Image'} 
+                                    alt={item.product_name} 
+                                    className="w-full h-full object-cover" 
+                                    onError={(e) => { 
+                                      const target = e.target as HTMLImageElement; 
+                                      target.onerror = null; 
+                                      target.src = 'https://placehold.co/50x50/f8f9fa/a1a1aa?text=No+Image'; 
+                                    }} 
+                                  />
                                 </div>
-                              </div>
-                            </Link>
-                          </li>
-                        ))}
+                                <div className="ml-4 flex-1 flex flex-col justify-center">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <h4 className="text-sm font-bold text-gray-800 group-hover:text-[#f26522] line-clamp-1">{item.product_name}</h4>
+                                    {index === 0 && (
+                                      <span className="text-[10px] uppercase font-black tracking-[0.2em] text-[#f26522] bg-[#fff1e5] border border-[#f9dcc7] px-2 py-1 rounded-full">
+                                        Top match
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] uppercase text-gray-500">
+                                    <span className="font-bold bg-gray-100 px-2 py-0.5 rounded-sm">{item.product_type}</span>
+                                    {item.manufacturer && <span className="font-bold bg-gray-100 px-2 py-0.5 rounded-sm">{item.manufacturer}</span>}
+                                  </div>
+                                  <div className="mt-2 text-sm text-slate-600">
+                                    {getSuggestionSnippet(item, terms)}
+                                  </div>
+                                  <div className="mt-2 text-sm font-black text-[#f26522]">Chi tiết &rarr;</div>
+                                </div>
+                              </Link>
+                            </li>
+                          );
+                        })}
                       </ul>
                       <button 
                         onClick={() => {

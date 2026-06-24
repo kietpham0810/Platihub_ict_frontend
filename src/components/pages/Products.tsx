@@ -98,11 +98,18 @@ export default function Products() {
       }
 
       if (searchKeyword) {
-        const lowerKeyword = searchKeyword.toLowerCase();
-        const matchSearch = 
-          (product.product_name && product.product_name.toLowerCase().includes(lowerKeyword)) ||
-          (product.manufacturer && product.manufacturer.toLowerCase().includes(lowerKeyword));
-        if (!matchSearch) return false;
+        const lowerKeyword = searchKeyword.toLowerCase().trim();
+        const searchTerms = lowerKeyword.split(/\s+/).filter(Boolean);
+        const fields = [
+          product.product_name || '',
+          product.manufacturer || '',
+          product.product_type || '',
+          product.description || '',
+          product.specifications ? String(product.specifications) : ''
+        ].map(field => field.toLowerCase());
+
+        const matchesSearch = searchTerms.every(term => fields.some(field => field.includes(term)));
+        if (!matchesSearch) return false;
       }
 
       // 2. Tầng Hãng Sản Xuất (OR)
