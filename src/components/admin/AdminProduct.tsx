@@ -30,7 +30,7 @@ export default function AdminProduct() {
   // ================= STATE CHO BOT ON-DEMAND =================
   const [isBotRunning, setIsBotRunning] = useState<boolean>(false);
   const [botReport, setBotReport] = useState<any>(null);
-  const [crawlUrl, setCrawlUrl] = useState<string>(''); // Lưu trữ link cần cào
+  const [crawlUrl, setCrawlUrl] = useState<string>(''); 
 
   const [formData, setFormData] = useState({
     product_name: '', manufacturer: '', product_type: '', image_url: '', description: ''
@@ -95,7 +95,6 @@ export default function AdminProduct() {
     setIsBotRunning(true);
     setBotReport(null);
     try {
-      // Truyền URL dưới dạng Query Parameter xuống Backend
       const response = await fetch(`${buildApiUrl('/bot_sync_hoanghapc.php')}?url=${encodeURIComponent(crawlUrl)}`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
@@ -104,7 +103,7 @@ export default function AdminProduct() {
       const data = await response.json();
       if (data.status === 'success') {
         setBotReport(data.data);
-        setCrawlUrl(''); // Xóa trắng ô input sau khi cào thành công
+        setCrawlUrl('');
         fetchProducts(); 
       } else {
         alert('Cảnh báo từ Động cơ Bot: ' + data.message);
@@ -240,7 +239,6 @@ export default function AdminProduct() {
       let hasError = false;
       let errorMessage = "";
 
-      // 🚨 CỐ VẤN IT: Dùng vòng lặp for...of để gọi API tuần tự thay vì Promise.all
       for (const id of selectedIds) {
         const response = await fetch(buildApiUrl(endpoint), {
           method: 'POST', 
@@ -251,7 +249,7 @@ export default function AdminProduct() {
         if (!response.ok) {
           hasError = true;
           errorMessage = `HTTP ${response.status}`;
-          break; // Đứt cáp thì dừng ngay lập tức, không bắn tiếp
+          break; 
         }
 
         const result = await response.json();
@@ -266,7 +264,7 @@ export default function AdminProduct() {
         alert(`Xử lý lỗi: ${errorMessage}`);
       } else {
         setSelectedIds([]);
-        fetchProducts(); // Cập nhật lại lưới sau khi quét sạch
+        fetchProducts(); 
       }
     } catch (error) {
       alert(`Đường truyền dữ liệu API lỗi do quá tải Database. Hãy chọn ít sản phẩm hơn!`);
@@ -328,7 +326,6 @@ export default function AdminProduct() {
           {/* 🤖 BẢNG ĐIỀU KHIỂN BOT CÀO DỮ LIỆU TỰ ĐỘNG CHUYÊN NGHIỆP */}
           <div className="p-3 md:p-0 flex flex-col md:flex-row items-center gap-3 justify-end md:ml-4">
             
-            {/* Thanh Input cho Bot On-Demand */}
             <div className="w-full md:w-64">
                 <input 
                     type="url" 
@@ -393,7 +390,18 @@ export default function AdminProduct() {
                       {pendingProducts.map(product => (
                         <tr key={product.id} className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
                           <td className="p-4"><input type="checkbox" className="w-5 h-5 accent-blue-600 cursor-pointer" checked={selectedIds.includes(product.id)} onChange={() => toggleSelect(product.id)} /></td>
-                          <td className="p-4"><img src={product.image_url} alt="img" className="w-16 h-16 object-cover rounded border bg-white" /></td>
+                          <td className="p-4">
+                            <img 
+                              src={product.image_url} 
+                              alt="img" 
+                              className="w-16 h-16 object-cover rounded border bg-white" 
+                              onError={(e) => { 
+                                const target = e.target as HTMLImageElement; 
+                                target.onerror = null; 
+                                target.src = 'https://placehold.co/400x300/f8f9fa/a1a1aa?text=No+Image'; 
+                              }} 
+                            />
+                          </td>
                           <td className="p-4 font-medium text-gray-900 max-w-xs">{product.product_name} <br/><span className="text-xs font-normal text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full mt-1 inline-block">{product.product_type}</span></td>
                           <td className="p-4 text-sm text-gray-500 max-w-xs truncate">{product.description}</td>
                           <td className="p-4 text-sm text-gray-500 font-semibold">{product.created_at ? new Date(product.created_at).toLocaleString('vi-VN') : '---'}</td>
@@ -443,7 +451,18 @@ export default function AdminProduct() {
                       {approvedProducts.map(product => (
                         <tr key={product.id} className="border-b border-gray-100 hover:bg-emerald-50/50 transition-colors">
                           <td className="p-4"><input type="checkbox" className="w-5 h-5 accent-emerald-600 cursor-pointer" checked={selectedIds.includes(product.id)} onChange={() => toggleSelect(product.id)} /></td>
-                          <td className="p-4"><img src={product.image_url} alt="img" className="w-16 h-16 object-cover rounded border bg-white" /></td>
+                          <td className="p-4">
+                            <img 
+                              src={product.image_url} 
+                              alt="img" 
+                              className="w-16 h-16 object-cover rounded border bg-white" 
+                              onError={(e) => { 
+                                const target = e.target as HTMLImageElement; 
+                                target.onerror = null; 
+                                target.src = 'https://placehold.co/400x300/f8f9fa/a1a1aa?text=No+Image'; 
+                              }} 
+                            />
+                          </td>
                           <td className="p-4 font-medium text-gray-900 max-w-sm">{product.product_name}</td>
                           <td className="p-4 text-sm text-gray-600">{product.manufacturer}</td>
                           <td className="p-4 text-center"><span className="bg-emerald-100 text-emerald-700 font-bold px-3 py-1 rounded-full text-xs">Đang hiển thị</span></td>
@@ -502,7 +521,11 @@ export default function AdminProduct() {
                             src={formData.image_url} 
                             alt="Preview" 
                             className="w-full h-full object-cover" 
-                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150?text=L%E1%BB%97i' }} 
+                            onError={(e) => { 
+                              const target = e.target as HTMLImageElement; 
+                              target.onerror = null; 
+                              target.src = 'https://placehold.co/400x300/f8f9fa/a1a1aa?text=No+Image'; 
+                            }} 
                           />
                         </div>
                       )}
@@ -517,7 +540,16 @@ export default function AdminProduct() {
                       {isUploadingImage && <p className="text-sm text-blue-600 mt-2 font-bold animate-pulse">Đang tải ảnh lên máy chủ Cloud...</p>}
                       {formData.image_url && imageInputMode === 'upload' && !isUploadingImage && (
                         <div className="mt-2 flex flex-col items-center">
-                          <img src={formData.image_url} alt="Preview" className="h-16 w-16 object-cover rounded border border-gray-200 mb-1" />
+                          <img 
+                            src={formData.image_url} 
+                            alt="Preview" 
+                            className="h-16 w-16 object-cover rounded border border-gray-200 mb-1" 
+                            onError={(e) => { 
+                              const target = e.target as HTMLImageElement; 
+                              target.onerror = null; 
+                              target.src = 'https://placehold.co/400x300/f8f9fa/a1a1aa?text=No+Image'; 
+                            }} 
+                          />
                         </div>
                       )}
                     </div>
@@ -639,7 +671,11 @@ export default function AdminProduct() {
                               src={editFormData.image_url} 
                               alt="Preview" 
                               className="w-full h-full object-cover" 
-                              onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150?text=L%E1%BB%97i' }} 
+                              onError={(e) => { 
+                                const target = e.target as HTMLImageElement; 
+                                target.onerror = null; 
+                                target.src = 'https://placehold.co/400x300/f8f9fa/a1a1aa?text=No+Image'; 
+                              }} 
                             />
                           </div>
                         )}

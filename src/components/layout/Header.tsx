@@ -1,4 +1,3 @@
-// src/components/layout/Header.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -52,7 +51,6 @@ export default function Header() {
   useEffect(() => {
     const fetchAllProductsForSearch = async () => {
       try {
-        // SỬ DỤNG BUILDER THAY VÌ HARDCODE
         const apiUrl = `${buildApiUrl(API_CONFIG.ENDPOINTS.GET_PRODUCTS)}?status=approved`;
         const response = await fetch(apiUrl);
         if (!response.ok) throw new Error('Network response was not ok');
@@ -173,7 +171,16 @@ export default function Header() {
                               className="flex items-center px-4 py-3 hover:bg-orange-50 transition-colors group"
                             >
                               <div className="h-12 w-12 bg-white border border-gray-100 rounded-md overflow-hidden shrink-0">
-                                <img src={item.image_url || 'https://via.placeholder.com/50'} alt={item.product_name} className="w-full h-full object-cover" />
+                                <img 
+                                  src={item.image_url || 'https://placehold.co/50x50/f8f9fa/a1a1aa?text=No+Image'} 
+                                  alt={item.product_name} 
+                                  className="w-full h-full object-cover" 
+                                  onError={(e) => { 
+                                    const target = e.target as HTMLImageElement; 
+                                    target.onerror = null; 
+                                    target.src = 'https://placehold.co/50x50/f8f9fa/a1a1aa?text=No+Image'; 
+                                  }} 
+                                />
                               </div>
                               <div className="ml-4 flex-1 flex flex-col justify-center">
                                 <h4 className="text-sm font-bold text-gray-800 group-hover:text-[#f26522] line-clamp-1">{item.product_name}</h4>

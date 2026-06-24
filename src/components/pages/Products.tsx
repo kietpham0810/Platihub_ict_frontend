@@ -220,7 +220,16 @@ export default function Products() {
               return (
                 <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group">
                   <div className="relative aspect-square p-4 flex items-center justify-center bg-white border-b border-gray-50">
-                    <img src={product.image_url} alt={product.product_name} className="max-h-full object-contain group-hover:scale-105 transition-transform duration-500" />
+                    <img 
+                      src={product.image_url} 
+                      alt={product.product_name} 
+                      className="max-h-full object-contain group-hover:scale-105 transition-transform duration-500" 
+                      onError={(e) => { 
+                        const target = e.target as HTMLImageElement; 
+                        target.onerror = null; 
+                        target.src = 'https://placehold.co/400x300/f8f9fa/a1a1aa?text=No+Image'; 
+                      }} 
+                    />
                     <span className="absolute top-2 left-2 bg-gray-100 text-gray-600 border border-gray-200 text-[10px] font-extrabold uppercase px-2 py-1 rounded shadow-sm">
                       {product.manufacturer}
                     </span>
