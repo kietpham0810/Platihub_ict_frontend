@@ -55,7 +55,7 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
       }`}
     >
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center px-6 py-6 md:px-12 border-b border-slate-200/70 bg-white/90 backdrop-blur">
-        <div className="flex flex-col gap-4 md:gap-6">
+        <div className="flex items-center gap-4 md:gap-6">
           <Link
             to="/"
             onClick={onClose}
@@ -68,9 +68,6 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
               style={{ filter: 'contrast(1.1)' }}
             />
           </Link>
-          <p className="max-w-xl text-sm text-slate-500 md:text-base">
-            Khám phá nhanh các danh mục, tin tức và hỗ trợ ngay trong một menu thiết kế hiện đại, sáng sủa.
-          </p>
         </div>
 
         <button
