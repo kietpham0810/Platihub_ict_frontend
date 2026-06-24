@@ -1,5 +1,5 @@
 import React from 'react';
-import { Product } from './AdminProduct';
+import type { Product } from './AdminProduct';
 
 interface AdminProductTableProps {
   activeTab: 'review' | 'manual' | 'manage';

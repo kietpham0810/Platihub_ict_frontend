@@ -1,5 +1,5 @@
 import React from 'react';
-import { SpecField } from './AdminProduct';
+import type { SpecField } from './AdminProduct';
 
 interface AdminProductManualProps {
   formData: {
