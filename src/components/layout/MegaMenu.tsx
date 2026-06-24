@@ -51,7 +51,7 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
     <div 
       onTransitionEnd={handleTransitionEnd}
       // Đã đổi z-50 thành z-[70] để đè lên Header (z-[60])
-      className={`fixed inset-0 z-[70] bg-[#161c28] text-white overflow-y-auto w-full h-screen transition-all duration-300 ease-out transform ${
+      className={`fixed inset-0 z-[70] bg-white text-black overflow-y-auto w-full h-screen transition-all duration-300 ease-out transform ${
         isAnimating ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-10 pointer-events-none'
       }`}
     >
