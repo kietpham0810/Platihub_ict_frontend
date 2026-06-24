@@ -183,9 +183,9 @@ export default function ProductDetail() {
               <div className="rounded-3xl bg-slate-50 p-5 border border-slate-200">
                 <p className="text-sm uppercase tracking-[0.25em] text-slate-500 font-semibold mb-2">Email</p>
                 <div className="space-y-2 text-slate-700 text-sm">
-                  <a href="mailto:software@platihub.com" className="text-[#f26522] hover:underline">software@platihub.com</a>
-                  <a href="mailto:ict@platihub.com" className="text-[#f26522] hover:underline">ict@platihub.com</a>
-                  <a href="mailto:hr@platihub.com" className="text-[#f26522] hover:underline">hr@platihub.com</a>
+                  <p><a href="mailto:software@platihub.com" className="text-[#f26522] hover:underline block">software@platihub.com</a></p>
+                  <p><a href="mailto:ict@platihub.com" className="text-[#f26522] hover:underline block">ict@platihub.com</a></p>
+                  <p><a href="mailto:hr@platihub.com" className="text-[#f26522] hover:underline block">hr@platihub.com</a></p>
                 </div>
               </div>
 
