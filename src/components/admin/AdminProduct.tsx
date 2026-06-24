@@ -27,9 +27,10 @@ export default function AdminProduct() {
   const [approvedProducts, setApprovedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Trạng thái vận hành Bot trên UI
+  // ================= STATE CHO BOT ON-DEMAND =================
   const [isBotRunning, setIsBotRunning] = useState<boolean>(false);
   const [botReport, setBotReport] = useState<any>(null);
+  const [crawlUrl, setCrawlUrl] = useState<string>(''); // Lưu trữ link cần cào
 
   const [formData, setFormData] = useState({
     product_name: '', manufacturer: '', product_type: '', image_url: '', description: ''
@@ -84,22 +85,32 @@ export default function AdminProduct() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
 
-  // ================= ĐIỀU KHIỂN HOẠT ĐỘNG CỦA BOT TỪ UI =================
+  // ================= ĐIỀU KHIỂN BOT THEO YÊU CẦU =================
   const handleRunBot = async () => {
+    if (!crawlUrl.trim()) {
+      alert("Vui lòng dán link Hoàng Hà PC vào ô trước khi chạy Bot!");
+      return;
+    }
+
     setIsBotRunning(true);
     setBotReport(null);
     try {
-      // Gọi trực tiếp đến file xử lý bot trên máy chủ Backend Render
-      const response = await fetch(buildApiUrl('/bot_sync_digiworld.php'));
+      // Truyền URL dưới dạng Query Parameter xuống Backend
+      const response = await fetch(`${buildApiUrl('/bot_sync_hoanghapc.php')}?url=${encodeURIComponent(crawlUrl)}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      
       const data = await response.json();
       if (data.status === 'success') {
         setBotReport(data.data);
-        fetchProducts(); // Cập nhật lại lưới hiển thị dữ liệu mới cào
+        setCrawlUrl(''); // Xóa trắng ô input sau khi cào thành công
+        fetchProducts(); 
       } else {
         alert('Cảnh báo từ Động cơ Bot: ' + data.message);
       }
     } catch (error) {
-      alert('Không thể kết nối đến luồng xử lý tự động của Bot.');
+      alert('Không thể kết nối đến máy chủ. Kiểm tra log hoặc kết nối mạng.');
     } finally {
       setIsBotRunning(false);
     }
@@ -216,37 +227,6 @@ export default function AdminProduct() {
     }
   };
 
-  // ================= ĐIỀU PHỐI TÁC VỤ HÀNG LOẠT ================= DB khỏe có thể dùng
-    // const executeConfirmAction = async () => {
-    //   if (!confirmDialog.type) return;
-      
-    //   let endpoint = '';
-    //   if (confirmDialog.type === 'approve') endpoint = API_CONFIG.ENDPOINTS.APPROVE_PRODUCT;
-    //   else if (confirmDialog.type === 'delete') endpoint = API_CONFIG.ENDPOINTS.DELETE_PRODUCT;
-    //   else if (confirmDialog.type === 'hide') endpoint = API_CONFIG.ENDPOINTS.HIDE_PRODUCT;
-
-    //   try {
-    //     const results = await Promise.all(selectedIds.map(async (id) => {
-    //       const response = await fetch(buildApiUrl(endpoint), {
-    //         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id })
-    //       });
-    //       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    //       return await response.json();
-    //     }));
-
-    //     const errorResult = results.find(r => r.status === 'error');
-    //     if (errorResult) {
-    //       alert(`Xử lý lỗi: ${errorResult.message}`);
-    //     } else {
-    //       setSelectedIds([]);
-    //       fetchProducts(); 
-    //     }
-    //   } catch (error) {
-    //     alert(`Đường truyền dữ liệu API lỗi. Hãy kiểm tra F12 tab Network!`);
-    //   } finally {
-    //     setConfirmDialog({ isOpen: false, type: null });
-    //   }
-    // };
   const executeConfirmAction = async () => {
     if (!confirmDialog.type) return;
     
@@ -329,20 +309,33 @@ export default function AdminProduct() {
           </div>
           
           {/* 🤖 BẢNG ĐIỀU KHIỂN BOT CÀO DỮ LIỆU TỰ ĐỘNG CHUYÊN NGHIỆP */}
-          <div className="p-3 md:p-0 flex items-center gap-3 justify-end">
+          <div className="p-3 md:p-0 flex flex-col md:flex-row items-center gap-3 justify-end md:ml-4">
+            
+            {/* Thanh Input cho Bot On-Demand */}
+            <div className="w-full md:w-64">
+                <input 
+                    type="url" 
+                    placeholder="Dán link Hoàng Hà PC vào đây..." 
+                    value={crawlUrl}
+                    onChange={(e) => setCrawlUrl(e.target.value)}
+                    className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+            </div>
+
             {botReport && (
-              <div className="text-right hidden xl:block">
-                <p className="text-[11px] text-green-600 font-bold">✨ Bot vừa quét xong trang: {botReport.scanned_pages}</p>
-                <p className="text-[10px] text-gray-400">Thêm mới: {botReport.new_inserted} | Trùng: {botReport.skipped_duplicates}</p>
+              <div className="text-right hidden xl:block shrink-0">
+                <p className="text-[11px] text-green-600 font-bold">✨ Tìm thấy {botReport.total_links_found} mục</p>
+                <p className="text-[10px] text-gray-400">Thêm mới: {botReport.new_inserted} | Cập nhật: {botReport.updated_specifications}</p>
               </div>
             )}
+            
             <button 
               onClick={handleRunBot} 
               disabled={isBotRunning}
-              className={`px-4 py-2 rounded-lg font-bold text-xs md:text-sm shadow flex items-center gap-2 transition-all ${isBotRunning ? 'bg-gray-200 text-gray-400 cursor-not-allowed animate-pulse' : 'bg-gradient-to-r from-blue-700 to-indigo-700 text-white hover:from-blue-800'}`}
+              className={`shrink-0 px-4 py-2 rounded-lg font-bold text-xs md:text-sm shadow flex items-center gap-2 transition-all ${isBotRunning ? 'bg-gray-200 text-gray-400 cursor-not-allowed animate-pulse' : 'bg-gradient-to-r from-blue-700 to-indigo-700 text-white hover:from-blue-800'}`}
             >
               <span>{isBotRunning ? '⚙️' : '🤖'}</span>
-              {isBotRunning ? 'Đang Deep Crawl...' : 'Kích hoạt Bot cào dữ liệu'}
+              {isBotRunning ? 'Đang Quét...' : 'Quét Link Này'}
             </button>
           </div>
         </div>
