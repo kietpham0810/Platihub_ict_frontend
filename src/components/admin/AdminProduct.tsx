@@ -227,6 +227,7 @@ export default function AdminProduct() {
     }
   };
 
+  // ================= ĐIỀU PHỐI TÁC VỤ HÀNG LOẠT (XẾP HÀNG CHỐNG TRÀN DATABASE) =================
   const executeConfirmAction = async () => {
     if (!confirmDialog.type) return;
     
@@ -236,28 +237,44 @@ export default function AdminProduct() {
     else if (confirmDialog.type === 'hide') endpoint = API_CONFIG.ENDPOINTS.HIDE_PRODUCT;
 
     try {
-      const results = await Promise.all(selectedIds.map(async (id) => {
-        const response = await fetch(buildApiUrl(endpoint), {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id })
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return await response.json();
-      }));
+      let hasError = false;
+      let errorMessage = "";
 
-      const errorResult = results.find(r => r.status === 'error');
-      if (errorResult) {
-        alert(`Xử lý lỗi: ${errorResult.message}`);
+      // 🚨 CỐ VẤN IT: Dùng vòng lặp for...of để gọi API tuần tự thay vì Promise.all
+      for (const id of selectedIds) {
+        const response = await fetch(buildApiUrl(endpoint), {
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ id })
+        });
+
+        if (!response.ok) {
+          hasError = true;
+          errorMessage = `HTTP ${response.status}`;
+          break; // Đứt cáp thì dừng ngay lập tức, không bắn tiếp
+        }
+
+        const result = await response.json();
+        if (result.status === 'error') {
+          hasError = true;
+          errorMessage = result.message;
+          break;
+        }
+      }
+
+      if (hasError) {
+        alert(`Xử lý lỗi: ${errorMessage}`);
       } else {
         setSelectedIds([]);
-        fetchProducts(); 
+        fetchProducts(); // Cập nhật lại lưới sau khi quét sạch
       }
     } catch (error) {
-      alert(`Đường truyền dữ liệu API lỗi. Hãy kiểm tra F12 tab Network!`);
+      alert(`Đường truyền dữ liệu API lỗi do quá tải Database. Hãy chọn ít sản phẩm hơn!`);
     } finally {
       setConfirmDialog({ isOpen: false, type: null });
     }
   };
-
+  
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.image_url) {
