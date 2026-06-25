@@ -54,6 +54,18 @@ export default function AdminProduct() {
     type: 'approve' | 'delete' | 'hide' | null;
   }>({ isOpen: false, type: null });
 
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error';
+    title: string;
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!notification) return;
+    const timer = window.setTimeout(() => setNotification(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [notification]);
+
   // ================= KÉO DỮ LIỆU ĐỒNG THỜI =================
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -279,13 +291,30 @@ export default function AdminProduct() {
       }
 
       if (hasError) {
-        alert(`Xử lý lỗi: ${errorMessage}`);
+        setNotification({
+          type: 'error',
+          title: 'Thao tác không thành công',
+          message: errorMessage || 'Đã có lỗi xảy ra khi xử lý sản phẩm.',
+        });
       } else {
         setSelectedIds([]);
-        fetchProducts(); 
+        fetchProducts();
+        setNotification({
+          type: 'success',
+          title: 'Hoàn tất',
+          message: confirmDialog.type === 'approve'
+            ? `${selectedIds.length} sản phẩm đã được duyệt thành công.`
+            : confirmDialog.type === 'hide'
+              ? `${selectedIds.length} sản phẩm đã được ẩn khỏi website.`
+              : `${selectedIds.length} sản phẩm đã bị xóa vĩnh viễn.`,
+        });
       }
     } catch (error) {
-      alert(`Đường truyền dữ liệu API lỗi do quá tải Database. Hãy chọn ít sản phẩm hơn!`);
+      setNotification({
+        type: 'error',
+        title: 'Lỗi kết nối',
+        message: 'Đường truyền API bị lỗi. Vui lòng thử lại sau.',
+      });
     } finally {
       setConfirmDialog({ isOpen: false, type: null });
     }
@@ -395,6 +424,31 @@ export default function AdminProduct() {
                     {confirmDialog.type === 'approve' ? 'Duyệt bài' : confirmDialog.type === 'hide' ? 'Ẩn ngay' : 'Xóa ngay'}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {notification && (
+          <div className="fixed right-4 top-6 z-50 w-full max-w-sm">
+            <div className={`rounded-3xl border p-4 shadow-2xl backdrop-blur-xl transition-all duration-300 ${notification.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-red-200 bg-red-50 text-red-900'}`}>
+              <div className="flex items-start gap-3">
+                <div className="mt-1 shrink-0">
+                  {notification.type === 'success' ? (
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                    </div>
+                  ) : (
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-100 text-red-700">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-sm mb-1">{notification.title}</p>
+                  <p className="text-sm leading-5">{notification.message}</p>
+                </div>
+                <button onClick={() => setNotification(null)} className="text-current opacity-80 hover:opacity-100 text-xl leading-none">×</button>
               </div>
             </div>
           </div>
