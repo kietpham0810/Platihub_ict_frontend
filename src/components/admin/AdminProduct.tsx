@@ -113,29 +113,26 @@ export default function AdminProduct() {
       const data = await response.json();
       
       if (data.status === 'success') {
-        setBotReport(data.data);
+        const payload = data.data || data;
+        setBotReport(payload);
         fetchProducts();
 
-        const totalFound = data.data?.total_links_found ?? data.total_links ?? 0;
-        const added = data.data?.new_inserted ?? data.new_inserted ?? 0;
-        const updated = data.data?.updated_specifications ?? data.updated_specifications ?? 0;
-        const successDetails = `Đã cào thành công ${totalFound} mục. Thêm mới ${added}, cập nhật ${updated}.`;
+        const totalFound = payload.total_links_found ?? payload.total_links ?? 0;
+        const added = payload.new_inserted ?? 0;
+        const updated = payload.updated_specifications ?? 0;
+        const successDetails = `Đã cào xong ${added} sản phẩm mới, cập nhật ${updated}. Tổng link trong danh mục: ${totalFound}.`;
 
-        if (data.has_more) {
-          setBotContinueDialog({
-            isOpen: true,
-            nextOffset: data.next_offset,
-            url,
-            summary: `${successDetails} Bạn có muốn tiếp tục cào 5 sản phẩm tiếp theo không?`,
-          });
-          setIsBotRunning(false);
+        if (payload.has_more) {
+          const wantMore = window.confirm(`${successDetails}\nĐã xong batch hiện tại. Bạn có muốn tiếp tục cào thêm 5 sản phẩm nữa không?`);
+          if (wantMore) {
+            await executeBotCrawl(url, payload.next_offset ?? offset + 5);
+          } else {
+            alert('Đã dừng quá trình cào dữ liệu.');
+            setIsBotRunning(false);
+            setCrawlUrl('');
+          }
         } else {
-          setResultDialog({
-            isOpen: true,
-            type: 'success',
-            title: 'Cào thành công',
-            message: successDetails,
-          });
+          alert(`${successDetails}\nTuyệt vời! Đã quét sạch danh mục này.`);
           setIsBotRunning(false);
           setCrawlUrl('');
         }

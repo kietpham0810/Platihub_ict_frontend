@@ -14,6 +14,18 @@ interface Product {
 }
 
 // ================= CẤU HÌNH CÁC TẦNG LỌC (TGDD STYLE) =================
+const PRODUCT_CATEGORIES = [
+  { label: 'PC', value: 'PC' },
+  { label: 'Laptop', value: 'Laptop' },
+  { label: 'CPU', value: 'CPU' },
+  { label: 'Mainboard', value: 'Mainboard' },
+  { label: 'VGA', value: 'VGA' },
+  { label: 'Linh kiện máy tính', value: 'Linh kiện' },
+  { label: 'Màn hình máy tính', value: 'Màn hình' },
+  { label: 'HDD-SSD', value: 'HDD-SSD' },
+  { label: 'Tản Nhiệt', value: 'Tản Nhiệt' },
+];
+
 const FILTER_CONFIG = {
   prices: [
     { label: 'Dưới 2 triệu', min: 0, max: 2000000 },
@@ -32,6 +44,9 @@ export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
+  // Trạng thái phân loại sản phẩm
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
   // Trạng thái bật/tắt Modal Lọc
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
@@ -85,6 +100,11 @@ export default function Products() {
   // ================= BỘ ĐỘNG CƠ LỌC LÕI (CORE FILTERING ENGINE) =================
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
+      // 0. Tầng Phân loại sản phẩm (Sidebar)
+      if (selectedCategory && product.product_type !== selectedCategory) {
+        return false;
+      }
+
       // 1. Tầng URL (Category & Search)
       if (categoryParam) {
         let matchCategory = false;
@@ -150,7 +170,7 @@ export default function Products() {
 
       return true; // Qua được mọi phễu thì cho hiển thị
     });
-  }, [products, categoryParam, searchKeyword, activeFilters]);
+  }, [products, categoryParam, searchKeyword, activeFilters, selectedCategory]);
 
   // ================= HÀM XỬ LÝ SỰ KIỆN CLICK FILTER =================
   const toggleFilter = (category: keyof typeof activeFilters, value: any) => {
@@ -208,18 +228,46 @@ export default function Products() {
           </button>
         </div>
 
+        {/* LAYOUT: SIDEBAR + CONTENT */}
+        <div className="flex gap-6">
+          {/* SIDEBAR PHÂN LOẠI (BẮN TRÁI) */}
+          <div className="hidden lg:flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-fit w-56 gap-2">
+            <h3 className="text-sm font-black text-gray-900 mb-4 uppercase tracking-wide">Phân loại sản phẩm</h3>
+            {PRODUCT_CATEGORIES.map(category => (
+              <button
+                key={category.value}
+                onClick={() => setSelectedCategory(selectedCategory === category.value ? null : category.value)}
+                className={`text-left px-4 py-2.5 rounded-lg text-sm font-bold transition-all border ${
+                  selectedCategory === category.value 
+                    ? 'bg-blue-600 text-white border-blue-600' 
+                    : 'text-gray-700 border-gray-200 hover:border-blue-400 hover:bg-blue-50'
+                }`}
+              >
+                {category.label}
+              </button>
+            ))}
+            {selectedCategory && (
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className="text-left px-4 py-2.5 rounded-lg text-sm font-bold text-gray-600 hover:text-red-600 border border-gray-200 hover:border-red-300 hover:bg-red-50 transition-all mt-2"
+              >
+                ✕ Xóa lọc
+              </button>
+            )}
+          </div>
+
         {/* LƯỚI SẢN PHẨM */}
         {isLoading ? (
           <div className="flex justify-center py-32"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div></div>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-32 bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div className="text-center py-32 bg-white rounded-2xl shadow-sm border border-gray-100 flex-1">
             <div className="text-7xl mb-4 opacity-50">📭</div>
             <h3 className="text-xl font-bold text-gray-800">Không tìm thấy sản phẩm phù hợp</h3>
             <p className="text-gray-500 mt-2">Thử bỏ bớt bộ lọc hoặc thay đổi từ khóa tìm kiếm.</p>
-            <button onClick={clearAllFilters} className="mt-6 text-blue-600 font-bold hover:underline">Xóa tất cả bộ lọc</button>
+            <button onClick={() => { setSelectedCategory(null); clearAllFilters(); }} className="mt-6 text-blue-600 font-bold hover:underline">Xóa tất cả bộ lọc</button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 flex-1">
             {filteredProducts.map(product => {
               const specsObj = parseSpecifications(product.specifications);
               const specKeys = specsObj ? Object.keys(specsObj).slice(0, 4) : [];
@@ -237,9 +285,6 @@ export default function Products() {
                         target.src = 'https://placehold.co/400x300/f8f9fa/a1a1aa?text=No+Image'; 
                       }} 
                     />
-                    <span className="absolute top-2 left-2 bg-gray-100 text-gray-600 border border-gray-200 text-[10px] font-extrabold uppercase px-2 py-1 rounded shadow-sm">
-                      {product.manufacturer}
-                    </span>
                   </div>
 
                   <div className="p-4 flex flex-col flex-grow">
@@ -271,6 +316,7 @@ export default function Products() {
             })}
           </div>
         )}
+        </div>
       </div>
 
       {/* ================= MODAL LỌC (TGDD STYLE) ================= */}
