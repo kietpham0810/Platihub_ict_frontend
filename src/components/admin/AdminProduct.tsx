@@ -61,11 +61,12 @@ export default function AdminProduct() {
     message: string;
   }>({ isOpen: false, type: 'success', title: '', message: '' });
 
-  useEffect(() => {
-    if (!resultDialog.isOpen) return;
-    const timer = window.setTimeout(() => setResultDialog(prev => ({ ...prev, isOpen: false })), 3200);
-    return () => window.clearTimeout(timer);
-  }, [resultDialog.isOpen]);
+  const [botContinueDialog, setBotContinueDialog] = useState<{
+    isOpen: boolean;
+    nextOffset: number;
+    url: string;
+    summary: string;
+  }>({ isOpen: false, nextOffset: 0, url: '', summary: '' });
 
   // ================= KÉO DỮ LIỆU ĐỒNG THỜI =================
   const fetchProducts = async () => {
@@ -113,37 +114,62 @@ export default function AdminProduct() {
       
       if (data.status === 'success') {
         setBotReport(data.data);
-        fetchProducts(); 
-        
+        fetchProducts();
+
+        const totalFound = data.data?.total_links_found ?? data.total_links ?? 0;
+        const added = data.data?.new_inserted ?? data.new_inserted ?? 0;
+        const updated = data.data?.updated_specifications ?? data.updated_specifications ?? 0;
+        const successDetails = `Đã cào thành công ${totalFound} mục. Thêm mới ${added}, cập nhật ${updated}.`;
+
         if (data.has_more) {
-          const wantMore = window.confirm(`Đã cào xong 5 sản phẩm (Tổng cộng: ${data.total_links} sản phẩm trên trang).\nBạn có muốn tiếp tục cào 5 sản phẩm tiếp theo không?`);
-          if (wantMore) {
-            executeBotCrawl(url, data.next_offset);
-          } else {
-            alert("Đã dừng quá trình cào dữ liệu.");
-            setIsBotRunning(false);
-            setCrawlUrl('');
-          }
+          setBotContinueDialog({
+            isOpen: true,
+            nextOffset: data.next_offset,
+            url,
+            summary: `${successDetails} Bạn có muốn tiếp tục cào 5 sản phẩm tiếp theo không?`,
+          });
+          setIsBotRunning(false);
         } else {
-          alert("Tuyệt vời! Đã quét sạch 100% sản phẩm trong link này.");
+          setResultDialog({
+            isOpen: true,
+            type: 'success',
+            title: 'Cào thành công',
+            message: successDetails,
+          });
           setIsBotRunning(false);
           setCrawlUrl('');
         }
       } else {
-        alert('Cảnh báo từ Động cơ Bot: ' + data.message);
+        setResultDialog({
+          isOpen: true,
+          type: 'error',
+          title: 'Lỗi Bot',
+          message: `Cảnh báo từ Động cơ Bot: ${data.message}`,
+        });
         setIsBotRunning(false);
       }
     } catch (error) {
-      alert('Không thể kết nối đến máy chủ Backend.');
+      setResultDialog({
+        isOpen: true,
+        type: 'error',
+        title: 'Lỗi kết nối',
+        message: 'Không thể kết nối đến máy chủ Backend.',
+      });
       setIsBotRunning(false);
     }
   };
 
   const handleRunBot = async () => {
     if (!crawlUrl.trim()) {
-      alert("Vui lòng dán link Hoàng Hà PC vào ô trước khi chạy Bot!");
+      setResultDialog({
+        isOpen: true,
+        type: 'error',
+        title: 'Thiếu URL',
+        message: 'Vui lòng dán link Hoàng Hà PC vào ô trước khi chạy Bot!',
+      });
       return;
     }
+    setResultDialog(prev => ({ ...prev, isOpen: false }));
     setBotReport(null);
     executeBotCrawl(crawlUrl, 0); 
   };
@@ -154,7 +180,12 @@ export default function AdminProduct() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Vui lòng chọn tệp tin hình ảnh chuẩn!');
+      setResultDialog({
+        isOpen: true,
+        type: 'error',
+        title: 'Ảnh không hợp lệ',
+        message: 'Vui lòng chọn tệp tin hình ảnh chuẩn!',
+      });
       return;
     }
 
@@ -173,10 +204,20 @@ export default function AdminProduct() {
       if (data.success) {
         setFormData({ ...formData, image_url: data.data.link });
       } else {
-        alert('Lỗi tải ảnh: ' + (data.data?.error || 'Unknown error'));
+        setResultDialog({
+          isOpen: true,
+          type: 'error',
+          title: 'Lỗi tải ảnh',
+          message: `Lỗi tải ảnh: ${data.data?.error || 'Unknown error'}`,
+        });
       }
     } catch (error) {
-      alert('Mất liên kết với máy chủ ảnh Cloud.');
+      setResultDialog({
+        isOpen: true,
+        type: 'error',
+        title: 'Lỗi kết nối ảnh',
+        message: 'Mất liên kết với máy chủ ảnh Cloud.',
+      });
     } finally {
       setIsUploadingImage(false);
       e.target.value = '';
@@ -347,7 +388,12 @@ export default function AdminProduct() {
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.image_url) {
-      alert("Vui lòng bổ sung liên kết hình ảnh!");
+      setResultDialog({
+        isOpen: true,
+        type: 'error',
+        title: 'Thiếu ảnh',
+        message: 'Vui lòng bổ sung liên kết hình ảnh!',
+      });
       return;
     }
 
@@ -368,11 +414,27 @@ export default function AdminProduct() {
         setSpecs([]);
         setImageInputMode('url'); 
         fetchProducts();
+        setResultDialog({
+          isOpen: true,
+          type: 'success',
+          title: 'Đã lưu sản phẩm',
+          message: 'Sản phẩm thủ công đã được thêm vào danh sách.',
+        });
       } else {
-        alert(`Lỗi hệ thống: ${result.message}`);
+        setResultDialog({
+          isOpen: true,
+          type: 'error',
+          title: 'Lỗi hệ thống',
+          message: result.message || 'Không thể lưu sản phẩm.',
+        });
       }
     } catch (error) {
-      alert('Lỗi cổng kết nối API.');
+      setResultDialog({
+        isOpen: true,
+        type: 'error',
+        title: 'Lỗi API',
+        message: 'Lỗi cổng kết nối API.',
+      });
     }
   };
 
@@ -447,6 +509,35 @@ export default function AdminProduct() {
                       confirmDialog.type === 'hide' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700'}`}>
                     {confirmDialog.type === 'approve' ? 'Duyệt bài' : confirmDialog.type === 'hide' ? 'Ẩn ngay' : 'Xóa ngay'}
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {botContinueDialog.isOpen && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/40 p-4">
+            <div className="w-full max-w-md rounded-3xl border border-blue-200 bg-white p-6 shadow-2xl" style={{ animation: 'popIn 280ms ease-out' }}>
+              <style>{`@keyframes popIn { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }`}</style>
+              <div className="flex flex-col items-center text-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-700 animate-pulse">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-slate-900">Tiếp tục cào dữ liệu?</p>
+                  <p className="mt-2 text-sm text-slate-600">{botContinueDialog.summary}</p>
+                </div>
+                <div className="flex w-full gap-3">
+                  <button onClick={() => {
+                    setBotContinueDialog({ isOpen: false, nextOffset: 0, url: '', summary: '' });
+                    setResultDialog({ isOpen: true, type: 'success', title: 'Đã tạm dừng', message: 'Quá trình cào dữ liệu đã dừng lại.' });
+                    setCrawlUrl('');
+                  }} className="flex-1 rounded-full bg-slate-900 px-6 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition">Dừng</button>
+                  <button onClick={() => {
+                    const { nextOffset, url } = botContinueDialog;
+                    setBotContinueDialog({ isOpen: false, nextOffset: 0, url: '', summary: '' });
+                    executeBotCrawl(url, nextOffset);
+                  }} className="flex-1 rounded-full bg-emerald-600 px-6 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition">Tiếp tục</button>
                 </div>
               </div>
             </div>
