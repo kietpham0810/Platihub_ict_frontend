@@ -61,6 +61,12 @@ export default function AdminProduct() {
     message: string;
   }>({ isOpen: false, type: 'success', title: '', message: '' });
 
+  useEffect(() => {
+    if (!resultDialog.isOpen) return;
+    const timer = window.setTimeout(() => setResultDialog(prev => ({ ...prev, isOpen: false })), 3200);
+    return () => window.clearTimeout(timer);
+  }, [resultDialog.isOpen]);
+
   // ================= KÉO DỮ LIỆU ĐỒNG THỜI =================
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -243,12 +249,28 @@ export default function AdminProduct() {
 
       if (result.status === 'success') {
         closeEditModal();
-        fetchProducts(); 
+        fetchProducts();
+        setResultDialog({
+          isOpen: true,
+          type: 'success',
+          title: 'Cập nhật thành công',
+          message: `Thông tin sản phẩm đã được chỉnh sửa thành công.`,
+        });
       } else {
-        alert(`Lỗi Backend: ${result.message}`);
+        setResultDialog({
+          isOpen: true,
+          type: 'error',
+          title: 'Cập nhật thất bại',
+          message: result.message || 'Không thể cập nhật sản phẩm.',
+        });
       }
     } catch (error) {
-      alert('Lỗi thiết lập kênh truyền dữ liệu.');
+      setResultDialog({
+        isOpen: true,
+        type: 'error',
+        title: 'Lỗi kết nối',
+        message: 'Lỗi thiết lập kênh truyền dữ liệu. Vui lòng thử lại.',
+      });
     }
   };
 
@@ -297,15 +319,17 @@ export default function AdminProduct() {
       } else {
         setSelectedIds([]);
         fetchProducts();
+        const successMessage = confirmDialog.type === 'approve'
+          ? `Đã duyệt thành công ${resultCount} sản phẩm.`
+          : confirmDialog.type === 'hide'
+            ? `Đã ẩn thành công ${resultCount} sản phẩm.`
+            : `Đã xóa thành công ${resultCount} sản phẩm.`;
+
         setResultDialog({
           isOpen: true,
           type: 'success',
           title: 'Hoàn tất',
-          message: confirmDialog.type === 'approve'
-            ? `${resultCount} sản phẩm đã được duyệt thành công.`
-            : confirmDialog.type === 'hide'
-              ? `${resultCount} sản phẩm đã được ẩn khỏi website.`
-              : `${resultCount} sản phẩm đã bị xóa vĩnh viễn.`,
+          message: successMessage,
         });
       }
     } catch (error) {
@@ -431,9 +455,10 @@ export default function AdminProduct() {
 
         {resultDialog.isOpen && (
           <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/40 p-4">
-            <div className={`w-full max-w-md rounded-3xl border p-6 shadow-2xl bg-white ${resultDialog.type === 'success' ? 'border-emerald-200' : 'border-red-200'}`}>
+            <div className={`w-full max-w-md rounded-3xl border p-6 shadow-2xl bg-white ${resultDialog.type === 'success' ? 'border-emerald-200' : 'border-red-200'}`} style={{ animation: 'popIn 280ms ease-out' }}>
+              <style>{`@keyframes popIn { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }`}</style>
               <div className="flex flex-col items-center text-center gap-4">
-                <div className={`flex h-16 w-16 items-center justify-center rounded-full ${resultDialog.type === 'success' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                <div className={`flex h-16 w-16 items-center justify-center rounded-full ${resultDialog.type === 'success' ? 'bg-emerald-100 text-emerald-700 animate-pulse' : 'bg-red-100 text-red-700 animate-pulse'}`}>
                   {resultDialog.type === 'success' ? (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
                   ) : (
