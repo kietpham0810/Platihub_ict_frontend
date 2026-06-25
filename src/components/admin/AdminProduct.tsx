@@ -54,17 +54,12 @@ export default function AdminProduct() {
     type: 'approve' | 'delete' | 'hide' | null;
   }>({ isOpen: false, type: null });
 
-  const [notification, setNotification] = useState<{
+  const [resultDialog, setResultDialog] = useState<{
+    isOpen: boolean;
     type: 'success' | 'error';
     title: string;
     message: string;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!notification) return;
-    const timer = window.setTimeout(() => setNotification(null), 3200);
-    return () => window.clearTimeout(timer);
-  }, [notification]);
+  }>({ isOpen: false, type: 'success', title: '', message: '' });
 
   // ================= KÉO DỮ LIỆU ĐỒNG THỜI =================
   const fetchProducts = async () => {
@@ -290,8 +285,11 @@ export default function AdminProduct() {
         }
       }
 
+      const resultCount = selectedIds.length;
+
       if (hasError) {
-        setNotification({
+        setResultDialog({
+          isOpen: true,
           type: 'error',
           title: 'Thao tác không thành công',
           message: errorMessage || 'Đã có lỗi xảy ra khi xử lý sản phẩm.',
@@ -299,18 +297,20 @@ export default function AdminProduct() {
       } else {
         setSelectedIds([]);
         fetchProducts();
-        setNotification({
+        setResultDialog({
+          isOpen: true,
           type: 'success',
           title: 'Hoàn tất',
           message: confirmDialog.type === 'approve'
-            ? `${selectedIds.length} sản phẩm đã được duyệt thành công.`
+            ? `${resultCount} sản phẩm đã được duyệt thành công.`
             : confirmDialog.type === 'hide'
-              ? `${selectedIds.length} sản phẩm đã được ẩn khỏi website.`
-              : `${selectedIds.length} sản phẩm đã bị xóa vĩnh viễn.`,
+              ? `${resultCount} sản phẩm đã được ẩn khỏi website.`
+              : `${resultCount} sản phẩm đã bị xóa vĩnh viễn.`,
         });
       }
     } catch (error) {
-      setNotification({
+      setResultDialog({
+        isOpen: true,
         type: 'error',
         title: 'Lỗi kết nối',
         message: 'Đường truyền API bị lỗi. Vui lòng thử lại sau.',
@@ -429,26 +429,22 @@ export default function AdminProduct() {
           </div>
         )}
 
-        {notification && (
-          <div className="fixed right-4 top-6 z-50 w-full max-w-sm">
-            <div className={`rounded-3xl border p-4 shadow-2xl backdrop-blur-xl transition-all duration-300 ${notification.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-red-200 bg-red-50 text-red-900'}`}>
-              <div className="flex items-start gap-3">
-                <div className="mt-1 shrink-0">
-                  {notification.type === 'success' ? (
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-                    </div>
+        {resultDialog.isOpen && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/40 p-4">
+            <div className={`w-full max-w-md rounded-3xl border p-6 shadow-2xl bg-white ${resultDialog.type === 'success' ? 'border-emerald-200' : 'border-red-200'}`}>
+              <div className="flex flex-col items-center text-center gap-4">
+                <div className={`flex h-16 w-16 items-center justify-center rounded-full ${resultDialog.type === 'success' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                  {resultDialog.type === 'success' ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
                   ) : (
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-100 text-red-700">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
-                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
                   )}
                 </div>
-                <div className="flex-1">
-                  <p className="font-bold text-sm mb-1">{notification.title}</p>
-                  <p className="text-sm leading-5">{notification.message}</p>
+                <div>
+                  <p className="text-xl font-bold text-slate-900">{resultDialog.title}</p>
+                  <p className="mt-2 text-sm text-slate-600">{resultDialog.message}</p>
                 </div>
-                <button onClick={() => setNotification(null)} className="text-current opacity-80 hover:opacity-100 text-xl leading-none">×</button>
+                <button onClick={() => setResultDialog({ ...resultDialog, isOpen: false })} className="rounded-full bg-slate-900 px-6 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition">Đóng</button>
               </div>
             </div>
           </div>
