@@ -14,6 +14,30 @@ interface DialogHelpers {
   showError: (title: string, message: string) => void;
 }
 
+// Defines which specifications are filterable for a given product type
+const FILTERABLE_SPECS: Record<string, string[]> = {
+  'PC': ['CPU', 'RAM', 'Ổ cứng', 'Nhu cầu'],
+  'Laptop': ['CPU', 'RAM', 'Ổ cứng', 'Card đồ họa'],
+  'Màn hình máy tính': ['Kích thước', 'Tần số quét', 'Độ phân giải'],
+  'CPU': ['Hãng sản xuất', 'Socket'],
+  'VGA': ['Hãng sản xuất', 'Dung lượng VRAM'],
+  'Tản nhiệt': ['Loại tản nhiệt'],
+  'Tai nghe': ['Thương hiệu', 'Kiểu kết nối'],
+};
+
+// Helper to safely parse specifications
+const parseSpecs = (product: Product): Record<string, string> => {
+  if (!product.specifications) return {};
+  try {
+    return typeof product.specifications === 'string'
+      ? JSON.parse(product.specifications)
+      : product.specifications;
+  } catch {
+    return {};
+  }
+};
+
+
 export function useProductData({ showSuccess, showError }: DialogHelpers) {
   const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
   const [approvedProducts, setApprovedProducts] = useState<Product[]>([]);
@@ -30,7 +54,9 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
   const [editFormData, setEditFormData] = useState<ProductFormData>(EMPTY_FORM_DATA);
   const [editSpecs, setEditSpecs] = useState<SpecField[]>([]);
   
+  // --- ADVANCED FILTERING STATE ---
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
+  const [specFilters, setSpecFilters] = useState<Record<string, string>>({});
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -53,28 +79,81 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProducts();
   }, []);
 
   const pendingCategories = useMemo(() => {
     const fixedCategories = [
       'PC', 'Laptop', 'CPU', 'MainBoard', 'VGA', 'Linh kiện máy tính', 
-      'Màn hình máy tính', 'HDD-SSD', 'Tản nhiệt'
+      'Màn hình máy tính', 'HDD-SSD', 'Tản nhiệt', 'Tai nghe'
     ];
-    return ['All', ...fixedCategories];
-  }, []); // Empty dependency array as categories are fixed
+    return ['All', ...fixedCategories.sort()];
+  }, []);
 
-  const filteredPendingProducts = useMemo(() => {
-    if (categoryFilter === 'All') {
-      return pendingProducts;
-    }
-    return pendingProducts.filter(p => p.product_type === categoryFilter);
-  }, [pendingProducts, categoryFilter]);
-  
+  // Reset spec filters when category changes
+  useEffect(() => {
+    setSpecFilters({});
+  }, [categoryFilter]);
+
+  // Clear selection when any filter changes
   useEffect(() => {
     setSelectedIds([]);
-  }, [categoryFilter]);
+  }, [categoryFilter, specFilters]);
+
+
+  const filterableSpecsForCategory = FILTERABLE_SPECS[categoryFilter] || [];
+  
+  const availableSpecFilters = useMemo(() => {
+    if (categoryFilter === 'All' || filterableSpecsForCategory.length === 0) {
+      return {};
+    }
+    
+    const categoryProducts = pendingProducts.filter(p => p.product_type === categoryFilter);
+    const options: Record<string, Set<string>> = {};
+
+    for (const specKey of filterableSpecsForCategory) {
+      options[specKey] = new Set();
+    }
+
+    for (const product of categoryProducts) {
+      const specs = parseSpecs(product);
+      for (const specKey of filterableSpecsForCategory) {
+        if (specs[specKey]) {
+          options[specKey].add(specs[specKey]);
+        }
+      }
+    }
+    
+    const result: Record<string, string[]> = {};
+    for (const specKey in options) {
+      if(options[specKey].size > 0) {
+        result[specKey] = ['All', ...Array.from(options[specKey]).sort()];
+      }
+    }
+    
+    return result;
+  }, [categoryFilter, pendingProducts, filterableSpecsForCategory]);
+
+
+  const filteredPendingProducts = useMemo(() => {
+    let products = pendingProducts;
+
+    // 1. Filter by category
+    if (categoryFilter !== 'All') {
+      products = products.filter(p => p.product_type === categoryFilter);
+    }
+
+    // 2. Filter by active spec filters
+    const activeSpecFilters = Object.entries(specFilters).filter(([, value]) => value && value !== 'All');
+    if (activeSpecFilters.length > 0) {
+      products = products.filter(p => {
+        const specs = parseSpecs(p);
+        return activeSpecFilters.every(([key, value]) => specs[key] === value);
+      });
+    }
+
+    return products;
+  }, [pendingProducts, categoryFilter, specFilters]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev =>
@@ -101,19 +180,7 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
       description: product.description || '',
     });
 
-    let parsedSpecs: SpecField[] = [];
-    if (product.specifications) {
-      try {
-        const specsObj =
-          typeof product.specifications === 'string'
-            ? JSON.parse(product.specifications)
-            : product.specifications;
-        parsedSpecs = Object.keys(specsObj).map(key => ({ key, value: specsObj[key] }));
-      } catch {
-        /* ignore malformed specifications */
-      }
-    }
-    setEditSpecs(parsedSpecs);
+    setEditSpecs(Object.entries(parseSpecs(product)).map(([key, value]) => ({ key, value })));
     setIsUpdateModalOpen(true);
   };
 
@@ -177,35 +244,17 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
           body: JSON.stringify({ id }),
         });
 
-        if (!response.ok) {
-          hasError = true;
-          errorMessage = `HTTP ${response.status}`;
-          break;
-        }
-
+        if (!response.ok) { hasError = true; errorMessage = `HTTP ${response.status}`; break; }
         const result = await response.json();
-        if (result.status === 'error') {
-          hasError = true;
-          errorMessage = result.message;
-          break;
-        }
+        if (result.status === 'error') { hasError = true; errorMessage = result.message; break; }
       }
-
-      const resultCount = selectedIds.length;
 
       if (hasError) {
         showError('Thao tác không thành công', errorMessage || 'Đã có lỗi xảy ra khi xử lý sản phẩm.');
       } else {
+        showSuccess('Hoàn tất', `${type === 'approve' ? `Đã duyệt thành công` : type === 'hide' ? `Đã ẩn thành công` : `Đã xóa thành công`} ${selectedIds.length} sản phẩm.`);
         setSelectedIds([]);
         fetchProducts();
-        const successMessage =
-          type === 'approve'
-            ? `Đã duyệt thành công ${resultCount} sản phẩm.`
-            : type === 'hide'
-              ? `Đã ẩn thành công ${resultCount} sản phẩm.`
-              : `Đã xóa thành công ${resultCount} sản phẩm.`;
-
-        showSuccess('Hoàn tất', successMessage);
       }
     } catch {
       showError('Lỗi kết nối', 'Đường truyền API bị lỗi. Vui lòng thử lại sau.');
@@ -215,19 +264,28 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
   };
 
   return {
+    // Data
     pendingProducts: filteredPendingProducts,
-    pendingCategories,
-    categoryFilter,
-    setCategoryFilter,
     approvedProducts,
     isLoading,
     fetchProducts,
+    // Category Filtering
+    pendingCategories,
+    categoryFilter,
+    setCategoryFilter,
+    // Spec Filtering
+    specFilters,
+    setSpecFilters,
+    availableSpecFilters,
+    filterableSpecsForCategory,
+    // Selection & Actions
     selectedIds,
     setSelectedIds,
     toggleSelect,
     confirmDialog,
     setConfirmDialog,
     executeConfirmAction,
+    // Update Modal
     isUpdateModalOpen,
     editingProduct,
     editFormData,

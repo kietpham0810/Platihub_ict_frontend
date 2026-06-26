@@ -24,6 +24,7 @@ export default function AdminProduct() {
 
   const { setSelectedIds } = products;
   useEffect(() => {
+    // This effect remains to clear selection when switching main tabs
     setSelectedIds([]);
   }, [activeTab, setSelectedIds]);
 
@@ -44,24 +45,33 @@ export default function AdminProduct() {
 
         <AdminProductTable
           activeTab={activeTab}
+          // Data
           pendingProducts={products.pendingProducts}
           approvedProducts={products.approvedProducts}
-          selectedIds={products.selectedIds}
           isLoading={products.isLoading}
+          // Bot
           botReport={bot.botReport}
           accumulatedReport={bot.accumulatedReport}
           isBotRunning={bot.isBotRunning}
           crawlUrl={bot.crawlUrl}
+          handleRunBot={bot.handleRunBot}
+          setCrawlUrl={bot.setCrawlUrl}
+          // Category Filtering
           pendingCategories={products.pendingCategories}
           categoryFilter={products.categoryFilter}
           setCategoryFilter={products.setCategoryFilter}
+          // Spec Filtering
+          specFilters={products.specFilters}
+          setSpecFilters={products.setSpecFilters}
+          availableSpecFilters={products.availableSpecFilters}
+          filterableSpecsForCategory={products.filterableSpecsForCategory}
+          // Actions
           setActiveTab={setActiveTab}
+          selectedIds={products.selectedIds}
           setSelectedIds={products.setSelectedIds}
           setConfirmDialog={products.setConfirmDialog}
           openEditModal={products.openEditModal}
-          handleRunBot={bot.handleRunBot}
           toggleSelect={products.toggleSelect}
-          setCrawlUrl={bot.setCrawlUrl}
         />
 
         <div className="p-8">
