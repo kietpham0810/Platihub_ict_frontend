@@ -17,16 +17,9 @@ interface AdminProductTableProps {
   accumulatedReport: AccumulatedReport;
   isBotRunning: boolean;
   crawlUrl: string;
-  // Category Filtering
   pendingCategories: string[];
   categoryFilter: string;
   setCategoryFilter: React.Dispatch<React.SetStateAction<string>>;
-  // Spec Filtering
-  specFilters: Record<string, string>;
-  setSpecFilters: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  availableSpecFilters: Record<string, string[]>;
-  filterableSpecsForCategory: string[];
-  // Actions
   setActiveTab: React.Dispatch<React.SetStateAction<'review' | 'manual' | 'manage'>>;
   setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
   setConfirmDialog: React.Dispatch<React.SetStateAction<{ isOpen: boolean; type: 'approve' | 'delete' | 'hide' | null }>>;
@@ -49,10 +42,6 @@ export default function AdminProductTable({
   pendingCategories,
   categoryFilter,
   setCategoryFilter,
-  specFilters,
-  setSpecFilters,
-  availableSpecFilters,
-  filterableSpecsForCategory,
   setActiveTab,
   setSelectedIds,
   setConfirmDialog,
@@ -61,13 +50,6 @@ export default function AdminProductTable({
   toggleSelect,
   setCrawlUrl,
 }: AdminProductTableProps) {
-
-  const handleSpecFilterChange = (specKey: string, value: string) => {
-    setSpecFilters(prev => ({
-      ...prev,
-      [specKey]: value,
-    }));
-  };
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -134,8 +116,21 @@ export default function AdminProductTable({
         {/* TAB 1: REVIEW */}
         {activeTab === 'review' && (
           <div>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-gray-800">Cần kiểm duyệt</h3>
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-4">
+                <h3 className="text-xl font-bold text-gray-800">Cần kiểm duyệt</h3>
+                {pendingCategories.length > 1 && (
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2"
+                  >
+                    {pendingCategories.map(cat => (
+                      <option key={cat} value={cat}>{cat === 'All' ? 'Tất cả loại' : cat}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
               {selectedIds.length > 0 && (
                 <div className="flex gap-3">
                   <button onClick={() => setConfirmDialog({ isOpen: true, type: 'delete' })} className="bg-red-100 text-red-700 hover:bg-red-200 px-4 py-2 rounded font-bold transition-colors">Xóa bỏ ({selectedIds.length})</button>
@@ -144,49 +139,13 @@ export default function AdminProductTable({
               )}
             </div>
 
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 flex flex-wrap items-center gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Loại sản phẩm</label>
-                  <select
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 w-48"
-                  >
-                    {pendingCategories.map(cat => (
-                      <option key={cat} value={cat}>{cat === 'All' ? 'Tất cả loại' : cat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {filterableSpecsForCategory.map(specKey => {
-                  const options = availableSpecFilters[specKey];
-                  if (!options || options.length <= 1) return null;
-
-                  return (
-                    <div key={specKey}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">{specKey}</label>
-                      <select
-                        value={specFilters[specKey] || 'All'}
-                        onChange={(e) => handleSpecFilterChange(specKey, e.target.value)}
-                        className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 w-48"
-                      >
-                        {options.map(opt => (
-                          <option key={opt} value={opt}>{opt === 'All' ? `Tất cả ${specKey}` : opt}</option>
-                        ))}
-                      </select>
-                    </div>
-                  );
-                })}
-            </div>
-
-
             {isLoading ? (
               <div className="text-center py-12 text-gray-500">Đang tải dữ liệu...</div>
             ) : pendingProducts.length === 0 ? (
               <div className="text-center py-12 text-gray-500 font-medium">
-                {categoryFilter === 'All' && Object.keys(specFilters).length === 0
+                {categoryFilter === 'All'
                   ? 'Kho dữ liệu sạch sẽ. Không có sản phẩm nào đang chờ duyệt.'
-                  : 'Không có sản phẩm nào khớp với bộ lọc đã chọn.'}
+                  : `Không có sản phẩm nào khớp với bộ lọc đã chọn.`}
               </div>
             ) : (
               <div className="overflow-x-auto border border-gray-200 rounded-lg">
