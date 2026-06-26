@@ -39,15 +39,9 @@ export default function EditProductModal({
 
         <div className="p-6">
           <form className="space-y-6" onSubmit={onSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Tên sản phẩm *</label>
-                <input type="text" required value={editFormData.product_name} onChange={e => setEditFormData({ ...editFormData, product_name: e.target.value })} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-blue-600" />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Nhà sản xuất *</label>
-                <input type="text" required value={editFormData.manufacturer} onChange={e => setEditFormData({ ...editFormData, manufacturer: e.target.value })} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-blue-600" />
-              </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Tên sản phẩm *</label>
+              <input type="text" required value={editFormData.product_name} onChange={e => setEditFormData({ ...editFormData, product_name: e.target.value })} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-blue-600" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -101,10 +101,6 @@ export default function ProductDetail() {
           </div>
 
           <div className="md:w-7/12 p-8 flex flex-col">
-            <div className="uppercase tracking-wider text-xs font-bold text-gray-400 mb-2">
-              Thương hiệu: <span className="text-[#f26522]">{product.manufacturer}</span>
-            </div>
-            
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight mb-4">
               {product.product_name}
             </h1>
