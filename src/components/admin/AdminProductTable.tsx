@@ -17,6 +17,9 @@ interface AdminProductTableProps {
   accumulatedReport: AccumulatedReport;
   isBotRunning: boolean;
   crawlUrl: string;
+  pendingCategories: string[];
+  categoryFilter: string;
+  setCategoryFilter: React.Dispatch<React.SetStateAction<string>>;
   setActiveTab: React.Dispatch<React.SetStateAction<'review' | 'manual' | 'manage'>>;
   setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
   setConfirmDialog: React.Dispatch<React.SetStateAction<{ isOpen: boolean; type: 'approve' | 'delete' | 'hide' | null }>>;
@@ -36,6 +39,9 @@ export default function AdminProductTable({
   accumulatedReport,
   isBotRunning,
   crawlUrl,
+  pendingCategories,
+  categoryFilter,
+  setCategoryFilter,
   setActiveTab,
   setSelectedIds,
   setConfirmDialog,
@@ -100,7 +106,20 @@ export default function AdminProductTable({
         {activeTab === 'review' && (
           <div>
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-800">Cần kiểm duyệt</h3>
+              <div className="flex items-center gap-4">
+                <h3 className="text-xl font-bold text-gray-800">Cần kiểm duyệt</h3>
+                {pendingCategories.length > 1 && (
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2"
+                  >
+                    {pendingCategories.map(cat => (
+                      <option key={cat} value={cat}>{cat === 'All' ? 'Tất cả loại' : cat}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
               {selectedIds.length > 0 && (
                 <div className="flex gap-3">
                   <button onClick={() => setConfirmDialog({ isOpen: true, type: 'delete' })} className="bg-red-100 text-red-700 hover:bg-red-200 px-4 py-2 rounded font-bold transition-colors">Xóa bỏ ({selectedIds.length})</button>
@@ -112,7 +131,11 @@ export default function AdminProductTable({
             {isLoading ? (
               <div className="text-center py-12 text-gray-500">Đang tải dữ liệu...</div>
             ) : pendingProducts.length === 0 ? (
-              <div className="text-center py-12 text-gray-500 font-medium">Kho dữ liệu sạch sẽ. Không có sản phẩm nào đang chờ duyệt.</div>
+              <div className="text-center py-12 text-gray-500 font-medium">
+                {categoryFilter === 'All'
+                  ? 'Kho dữ liệu sạch sẽ. Không có sản phẩm nào đang chờ duyệt.'
+                  : `Không có sản phẩm nào thuộc loại '${categoryFilter}' đang chờ duyệt.`}
+              </div>
             ) : (
               <div className="overflow-x-auto border border-gray-200 rounded-lg">
                 <table className="w-full text-left border-collapse">
@@ -121,7 +144,6 @@ export default function AdminProductTable({
                       <th className="p-4 w-12"><input type="checkbox" className="w-5 h-5 accent-blue-600 cursor-pointer" onChange={(e) => setSelectedIds(e.target.checked ? pendingProducts.map(p => p.id) : [])} checked={selectedIds.length === pendingProducts.length && pendingProducts.length > 0} /></th>
                       <th className="p-4 font-semibold uppercase text-xs">Hình ảnh</th>
                       <th className="p-4 font-semibold uppercase text-xs">Tên sản phẩm</th>
-                      <th className="p-4 font-semibold uppercase text-xs">Mô tả</th>
                       <th className="p-4 font-semibold uppercase text-xs">Thời gian cào</th>
                       <th className="p-4 font-semibold uppercase text-xs text-center">Thao tác</th>
                     </tr>
@@ -143,7 +165,6 @@ export default function AdminProductTable({
                           />
                         </td>
                         <td className="p-4 font-medium text-gray-900 max-w-xs">{product.product_name} <br/><span className="text-xs font-normal text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full mt-1 inline-block">{product.product_type}</span></td>
-                        <td className="p-4 text-sm text-gray-500 max-w-xs truncate">{product.description}</td>
                         <td className="p-4 text-sm text-gray-500 font-semibold">{product.created_at ? new Date(product.created_at).toLocaleString('vi-VN') : '---'}</td>
                         <td className="p-4 text-center">
                           <button onClick={() => openEditModal(product)} className="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded transition-colors">Sửa</button>

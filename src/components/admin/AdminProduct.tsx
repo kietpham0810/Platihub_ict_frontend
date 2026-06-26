@@ -52,6 +52,9 @@ export default function AdminProduct() {
           accumulatedReport={bot.accumulatedReport}
           isBotRunning={bot.isBotRunning}
           crawlUrl={bot.crawlUrl}
+          pendingCategories={products.pendingCategories}
+          categoryFilter={products.categoryFilter}
+          setCategoryFilter={products.setCategoryFilter}
           setActiveTab={setActiveTab}
           setSelectedIds={products.setSelectedIds}
           setConfirmDialog={products.setConfirmDialog}

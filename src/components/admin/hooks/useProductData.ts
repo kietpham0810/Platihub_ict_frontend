@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { API_CONFIG, buildApiUrl } from '../../../constants/config';
 import {
   EMPTY_FORM_DATA,
@@ -29,6 +29,8 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editFormData, setEditFormData] = useState<ProductFormData>(EMPTY_FORM_DATA);
   const [editSpecs, setEditSpecs] = useState<SpecField[]>([]);
+  
+  const [categoryFilter, setCategoryFilter] = useState<string>('All');
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -54,6 +56,22 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProducts();
   }, []);
+
+  const pendingCategories = useMemo(() => {
+    const categories = new Set(pendingProducts.map(p => p.product_type).filter(Boolean));
+    return ['All', ...Array.from(categories)];
+  }, [pendingProducts]);
+
+  const filteredPendingProducts = useMemo(() => {
+    if (categoryFilter === 'All') {
+      return pendingProducts;
+    }
+    return pendingProducts.filter(p => p.product_type === categoryFilter);
+  }, [pendingProducts, categoryFilter]);
+  
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [categoryFilter]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev =>
@@ -194,7 +212,10 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
   };
 
   return {
-    pendingProducts,
+    pendingProducts: filteredPendingProducts,
+    pendingCategories,
+    categoryFilter,
+    setCategoryFilter,
     approvedProducts,
     isLoading,
     fetchProducts,
