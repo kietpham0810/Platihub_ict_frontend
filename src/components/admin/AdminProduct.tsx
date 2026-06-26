@@ -19,7 +19,7 @@ export default function AdminProduct() {
   const { showSuccess, showError, closeResult } = dialogs;
 
   const products = useProductData({ showSuccess, showError });
-  const bot = useProductBot({ fetchProducts: products.fetchProducts, showError, closeResult });
+  const bot = useProductBot({ fetchProducts: products.fetchProducts, dialogs });
   const form = useProductForm({ fetchProducts: products.fetchProducts, showSuccess, showError });
 
   const { setSelectedIds } = products;
@@ -29,8 +29,7 @@ export default function AdminProduct() {
 
   const handleBotStop = () => {
     dialogs.setBotContinueDialog({ isOpen: false, nextOffset: 0, url: '', summary: '' });
-    showSuccess('Đã tạm dừng', 'Quá trình cào dữ liệu đã dừng lại.');
-    bot.setCrawlUrl('');
+    bot.stopBot();
   };
 
   const handleBotContinue = () => {
@@ -50,6 +49,7 @@ export default function AdminProduct() {
           selectedIds={products.selectedIds}
           isLoading={products.isLoading}
           botReport={bot.botReport}
+          accumulatedReport={bot.accumulatedReport}
           isBotRunning={bot.isBotRunning}
           crawlUrl={bot.crawlUrl}
           setActiveTab={setActiveTab}

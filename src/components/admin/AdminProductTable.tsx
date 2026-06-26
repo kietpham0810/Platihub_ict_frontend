@@ -1,6 +1,12 @@
 import React from 'react';
 import type { Product, BotReport } from './types';
 
+interface AccumulatedReport {
+  added: number;
+  updated: number;
+  totalFound: number;
+}
+
 interface AdminProductTableProps {
   activeTab: 'review' | 'manual' | 'manage';
   pendingProducts: Product[];
@@ -8,6 +14,7 @@ interface AdminProductTableProps {
   selectedIds: string[];
   isLoading: boolean;
   botReport: BotReport | null;
+  accumulatedReport: AccumulatedReport;
   isBotRunning: boolean;
   crawlUrl: string;
   setActiveTab: React.Dispatch<React.SetStateAction<'review' | 'manual' | 'manage'>>;
@@ -16,7 +23,7 @@ interface AdminProductTableProps {
   openEditModal: (product: Product) => void;
   handleRunBot: () => Promise<void>;
   toggleSelect: (id: string) => void;
-  setCrawlUrl: React.Dispatch<React.SetStateAction<string>>; // 🚨 KHAI BÁO BẮT BUỘC ĐỂ NHẬN DỮ LIỆU
+  setCrawlUrl: React.Dispatch<React.SetStateAction<string>>;
 }
 
 export default function AdminProductTable({
@@ -26,6 +33,7 @@ export default function AdminProductTable({
   selectedIds,
   isLoading,
   botReport,
+  accumulatedReport,
   isBotRunning,
   crawlUrl,
   setActiveTab,
@@ -34,7 +42,7 @@ export default function AdminProductTable({
   openEditModal,
   handleRunBot,
   toggleSelect,
-  setCrawlUrl, // 🚨 NHẬN HÀM TỪ FILE GỐC
+  setCrawlUrl,
 }: AdminProductTableProps) {
   return (
     <>
@@ -57,22 +65,29 @@ export default function AdminProductTable({
               type="url"
               placeholder="Dán link cần lấy dữ liệu sản phẩm vào đây..."
               value={crawlUrl}
-              onChange={(e) => setCrawlUrl(e.target.value)} // 🚨 SẼ KHÔNG CÒN BỊ LỖI
+              onChange={(e) => setCrawlUrl(e.target.value)}
               className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
-          {botReport && (
+          {isBotRunning && accumulatedReport.totalFound > 0 && (
+            <div className="text-right hidden xl:block shrink-0 animate-pulse">
+              <p className="text-xs text-blue-600 font-bold">Tổng cộng: Thêm {accumulatedReport.added}, Cập nhật {accumulatedReport.updated}</p>
+              <p className="text-[11px] text-gray-500">Đang quét {accumulatedReport.totalFound} links...</p>
+            </div>
+          )}
+
+          {!isBotRunning && botReport && (
             <div className="text-right hidden xl:block shrink-0">
               <p className="text-[11px] text-green-600 font-bold">✨ Tìm thấy {botReport.total_links_found} mục</p>
-              <p className="text-[10px] text-gray-400">Thêm mới: {botReport.new_inserted} | Cập nhật: {botReport.updated_specifications}</p>
+              <p className="text-[10px] text-gray-400">Lần cuối: Thêm {botReport.new_inserted} | Cập nhật: {botReport.updated_specifications}</p>
             </div>
           )}
 
           <button
             onClick={handleRunBot}
             disabled={isBotRunning}
-            className={`shrink-0 px-4 py-2 rounded-lg font-bold text-xs md:text-sm shadow flex items-center gap-2 transition-all ${isBotRunning ? 'bg-gray-200 text-gray-400 cursor-not-allowed animate-pulse' : 'bg-gradient-to-r from-blue-700 to-indigo-700 text-white hover:from-blue-800'}`}
+            className={`shrink-0 px-4 py-2 rounded-lg font-bold text-xs md:text-sm shadow flex items-center gap-2 transition-all ${isBotRunning ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-700 to-indigo-700 text-white hover:from-blue-800'}`}
           >
             <span>{isBotRunning ? '⚙️' : '🤖'}</span>
             {isBotRunning ? 'Đang Quét...' : 'Quét Link Này'}

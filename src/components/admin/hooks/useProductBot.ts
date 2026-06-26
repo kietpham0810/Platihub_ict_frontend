@@ -1,19 +1,31 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { buildApiUrl } from '../../../constants/config';
 import type { BotReport } from '../types';
+import type { useDialogs } from './useDialogs';
 
 interface UseProductBotArgs {
   fetchProducts: () => Promise<void>;
-  showError: (title: string, message: string) => void;
-  closeResult: () => void;
+  dialogs: ReturnType<typeof useDialogs>;
 }
 
-export function useProductBot({ fetchProducts, showError, closeResult }: UseProductBotArgs) {
+interface AccumulatedReport {
+  added: number;
+  updated: number;
+  totalFound: number;
+}
+
+export function useProductBot({ fetchProducts, dialogs }: UseProductBotArgs) {
+  const { showSuccess, showError, setBotContinueDialog } = dialogs;
   const [isBotRunning, setIsBotRunning] = useState<boolean>(false);
   const [botReport, setBotReport] = useState<BotReport | null>(null);
   const [crawlUrl, setCrawlUrl] = useState<string>('');
+  const [accumulatedReport, setAccumulatedReport] = useState<AccumulatedReport>({
+    added: 0,
+    updated: 0,
+    totalFound: 0,
+  });
 
-  const executeBotCrawl = async (url: string, offset: number = 0) => {
+  const executeBotCrawl = useCallback(async (url: string, offset: number = 0) => {
     setIsBotRunning(true);
     try {
       const response = await fetch(
@@ -26,26 +38,30 @@ export function useProductBot({ fetchProducts, showError, closeResult }: UseProd
       if (data.status === 'success') {
         const payload = data.data || data;
         setBotReport(payload);
-        fetchProducts();
+        await fetchProducts();
 
-        const totalFound = payload.total_links_found ?? payload.total_links ?? 0;
         const added = payload.new_inserted ?? 0;
         const updated = payload.updated_specifications ?? 0;
-        const successDetails = `Đã cào xong ${added} sản phẩm mới, cập nhật ${updated}. Tổng link trong danh mục: ${totalFound}.`;
+        const totalFound = payload.total_links_found ?? payload.total_links ?? 0;
+        
+        const newAccumulated = {
+          added: accumulatedReport.added + added,
+          updated: accumulatedReport.updated + updated,
+          totalFound: totalFound, // Total found is usually the same across batches
+        };
+        setAccumulatedReport(newAccumulated);
+
+        const summary = `Batch này: Thêm ${added}, cập nhật ${updated}. Tổng cộng: Thêm ${newAccumulated.added}, cập nhật ${newAccumulated.updated}. Tổng link: ${totalFound}.`;
 
         if (payload.has_more) {
-          const wantMore = window.confirm(
-            `${successDetails}\nĐã xong batch hiện tại. Bạn có muốn tiếp tục cào thêm 5 sản phẩm nữa không?`
-          );
-          if (wantMore) {
-            await executeBotCrawl(url, payload.next_offset ?? offset + 5);
-          } else {
-            alert('Đã dừng quá trình cào dữ liệu.');
-            setIsBotRunning(false);
-            setCrawlUrl('');
-          }
+          setBotContinueDialog({
+            isOpen: true,
+            nextOffset: payload.next_offset ?? offset + 5,
+            url: url,
+            summary: summary,
+          });
         } else {
-          alert(`${successDetails}\nTuyệt vời! Đã quét sạch danh mục này.`);
+          showSuccess('Hoàn tất!', `${summary}\nĐã quét sạch danh mục này.`);
           setIsBotRunning(false);
           setCrawlUrl('');
         }
@@ -53,20 +69,28 @@ export function useProductBot({ fetchProducts, showError, closeResult }: UseProd
         showError('Lỗi Bot', `Cảnh báo từ Động cơ Bot: ${data.message}`);
         setIsBotRunning(false);
       }
-    } catch {
-      showError('Lỗi kết nối', 'Không thể kết nối đến máy chủ Backend.');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Không thể kết nối đến máy chủ Backend.';
+      showError('Lỗi kết nối', errorMessage);
       setIsBotRunning(false);
     }
-  };
+  }, [fetchProducts, showSuccess, showError, setBotContinueDialog, accumulatedReport]);
 
   const handleRunBot = async () => {
     if (!crawlUrl.trim()) {
       showError('Thiếu URL', 'Vui lòng dán link cần lấy dữ liệu sản phẩm vào ô trước khi chạy Bot!');
       return;
     }
-    closeResult();
+    dialogs.closeResult();
     setBotReport(null);
+    setAccumulatedReport({ added: 0, updated: 0, totalFound: 0 }); // Reset accumulated report
     executeBotCrawl(crawlUrl, 0);
+  };
+
+  const stopBot = () => {
+    setIsBotRunning(false);
+    showSuccess('Đã dừng', 'Quá trình cào dữ liệu đã được dừng lại.');
+    setCrawlUrl('');
   };
 
   return {
@@ -76,5 +100,7 @@ export function useProductBot({ fetchProducts, showError, closeResult }: UseProd
     setCrawlUrl,
     handleRunBot,
     executeBotCrawl,
+    accumulatedReport,
+    stopBot,
   };
 }
