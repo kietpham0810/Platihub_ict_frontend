@@ -1,0 +1,19 @@
+{
+  "servers": {
+    "devin": {
+      "type": "http",
+      "url": "https://mcp.devin.ai/mcp",
+      "headers": {
+        "Authorization": "Bearer ${input:devin_api_key}"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "id": "devin_api_key",
+      "type": "promptString",
+      "description": "Devin API Key (https://app.devin.ai -> Settings -> API Keys)",
+      "password": true
+    }
+  ]
+}
