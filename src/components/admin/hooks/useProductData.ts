@@ -58,9 +58,12 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
   }, []);
 
   const pendingCategories = useMemo(() => {
-    const categories = new Set(pendingProducts.map(p => p.product_type).filter(Boolean));
-    return ['All', ...Array.from(categories)];
-  }, [pendingProducts]);
+    const fixedCategories = [
+      'PC', 'Laptop', 'CPU', 'MainBoard', 'VGA', 'Linh kiện máy tính', 
+      'Màn hình máy tính', 'HDD-SSD', 'Tản nhiệt'
+    ];
+    return ['All', ...fixedCategories];
+  }, []); // Empty dependency array as categories are fixed
 
   const filteredPendingProducts = useMemo(() => {
     if (categoryFilter === 'All') {
