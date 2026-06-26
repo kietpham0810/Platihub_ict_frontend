@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import MegaMenu from './MegaMenu';
@@ -13,7 +13,7 @@ interface SearchResult {
   description: string;
   manufacturer: string;
   product_type: string;
-  specifications?: any;
+  specifications?: string | Record<string, string> | null;
 }
 
 export default function Header() {
@@ -25,7 +25,6 @@ export default function Header() {
 
   // STATES TÌM KIẾM THÔNG MINH
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [globalProducts, setGlobalProducts] = useState<SearchResult[]>([]); 
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -70,15 +69,10 @@ export default function Header() {
   }, []);
 
   // LỌC DỮ LIỆU TỐC ĐỘ CAO
-  useEffect(() => {
+  const searchResults = useMemo<SearchResult[]>(() => {
     const trimmedQuery = searchQuery.trim();
-    if (trimmedQuery.length === 0) {
-      setSearchResults([]);
-      setShowSuggestions(false);
-      return;
-    }
+    if (trimmedQuery.length === 0) return [];
 
-    setShowSuggestions(true);
     const query = trimmedQuery.toLowerCase();
     const terms = query.split(/\s+/).filter(Boolean);
 
@@ -88,7 +82,7 @@ export default function Header() {
         const category = p.product_type ? p.product_type.toLowerCase() : '';
         const manufacturer = p.manufacturer ? p.manufacturer.toLowerCase() : '';
         const description = p.description ? p.description.toLowerCase() : '';
-        const specs = (p as any).specifications ? String((p as any).specifications).toLowerCase() : '';
+        const specs = p.specifications ? String(p.specifications).toLowerCase() : '';
         const haystack = `${name} ${category} ${manufacturer} ${description} ${specs}`;
 
         let score = 0;
@@ -107,7 +101,7 @@ export default function Header() {
       .filter(item => item.score > 0)
       .sort((a, b) => b.score - a.score || a.product.product_name.localeCompare(b.product.product_name));
 
-    setSearchResults(scoredProducts.slice(0, 5).map(item => item.product));
+    return scoredProducts.slice(0, 5).map(item => item.product);
   }, [searchQuery, globalProducts]);
 
   useEffect(() => {
@@ -137,7 +131,7 @@ export default function Header() {
       item.product_type,
       item.manufacturer,
       item.description,
-      (item as any).specifications ? String((item as any).specifications) : ''
+      item.specifications ? String(item.specifications) : ''
     ];
 
     const haystack = fields.find(field => {
@@ -183,7 +177,11 @@ export default function Header() {
               <input 
                 type="text" 
                 value={searchQuery} 
-                onChange={(e) => setSearchQuery(e.target.value)} 
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSearchQuery(value);
+                  setShowSuggestions(value.trim().length > 0);
+                }} 
                 onFocus={() => searchQuery.trim().length > 0 && setShowSuggestions(true)} 
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && searchQuery.trim()) {
