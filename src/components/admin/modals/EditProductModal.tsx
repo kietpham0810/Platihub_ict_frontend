@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Product, ProductFormData, SpecField } from '../types';
+import { PRODUCT_CATEGORY_OPTIONS } from '../types';
 
 interface EditProductModalProps {
   isOpen: boolean;
@@ -53,9 +54,10 @@ export default function EditProductModal({
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Phân loại *</label>
                 <select required value={editFormData.product_type} onChange={e => setEditFormData({ ...editFormData, product_type: e.target.value })} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-blue-600 bg-white">
-                  <option value="Thiết bị máy tính">Thiết bị máy tính</option>
-                  <option value="Linh kiện">Linh kiện</option>
-                  <option value="Phần mềm">Phần mềm</option>
+                  <option value="">-- Chọn phân loại --</option>
+                  {PRODUCT_CATEGORY_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
 
