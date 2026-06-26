@@ -61,7 +61,7 @@ export function useProductBot({ fetchProducts, showError, closeResult }: UseProd
 
   const handleRunBot = async () => {
     if (!crawlUrl.trim()) {
-      showError('Thiếu URL', 'Vui lòng dán link Hoàng Hà PC vào ô trước khi chạy Bot!');
+      showError('Thiếu URL', 'Vui lòng dán link cần lấy dữ liệu sản phẩm vào ô trước khi chạy Bot!');
       return;
     }
     closeResult();
