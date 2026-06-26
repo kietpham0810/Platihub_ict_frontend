@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Product } from './AdminProduct';
+import type { Product, BotReport } from './types';
 
 interface AdminProductTableProps {
   activeTab: 'review' | 'manual' | 'manage';
@@ -7,7 +7,7 @@ interface AdminProductTableProps {
   approvedProducts: Product[];
   selectedIds: string[];
   isLoading: boolean;
-  botReport: any;
+  botReport: BotReport | null;
   isBotRunning: boolean;
   crawlUrl: string;
   setActiveTab: React.Dispatch<React.SetStateAction<'review' | 'manual' | 'manage'>>;
