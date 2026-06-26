@@ -17,6 +17,7 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
 
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- mount before enter animation
       setShouldRender(true);
       const timer = setTimeout(() => {
         setIsAnimating(true);
