@@ -1,5 +1,6 @@
 import React from 'react';
 import type { SpecField } from './types';
+import { PRODUCT_CATEGORY_OPTIONS } from './types';
 
 interface AdminProductManualProps {
   formData: {
@@ -58,9 +59,9 @@ export default function AdminProductManual({
           <label className="block text-sm font-bold text-gray-700 mb-2">Phân loại *</label>
           <select required value={formData.product_type} onChange={e => setFormData({...formData, product_type: e.target.value})} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522] bg-white">
             <option value="">-- Chọn phân loại --</option>
-            <option value="Thiết bị máy tính">Thiết bị máy tính</option>
-            <option value="Linh kiện">Linh kiện</option>
-            <option value="Phần mềm">Phần mềm</option>
+            {PRODUCT_CATEGORY_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
         </div>
         
