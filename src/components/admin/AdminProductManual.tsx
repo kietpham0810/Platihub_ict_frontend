@@ -43,15 +43,9 @@ export default function AdminProductManual({
 }: AdminProductManualProps) {
   return (
     <form className="max-w-4xl mx-auto space-y-6" onSubmit={handleManualSubmit}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-bold text-gray-700 mb-2">Tên sản phẩm *</label>
-          <input type="text" required value={formData.product_name} onChange={e => setFormData({...formData, product_name: e.target.value})} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522]" />
-        </div>
-        <div>
-          <label className="block text-sm font-bold text-gray-700 mb-2">Nhà sản xuất *</label>
-          <input type="text" required value={formData.manufacturer} onChange={e => setFormData({...formData, manufacturer: e.target.value})} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522]" />
-        </div>
+      <div>
+        <label className="block text-sm font-bold text-gray-700 mb-2">Tên sản phẩm *</label>
+        <input type="text" required value={formData.product_name} onChange={e => setFormData({...formData, product_name: e.target.value})} className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:border-[#f26522]" />
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
