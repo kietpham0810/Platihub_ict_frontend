@@ -12,7 +12,7 @@ interface Product {
   product_type: string;
   price?: number | null;
   is_price_visible?: number;
-  specifications?: any;
+  specifications?: string | Record<string, string> | null;
 }
 
 export default function ProductDetail() {
@@ -35,7 +35,7 @@ export default function ProductDetail() {
         } else {
           setError(data.message || 'Sản phẩm không tồn tại.');
         }
-      } catch (err) {
+      } catch {
         setError('Lỗi kết nối đến máy chủ.');
       } finally {
         setIsLoading(false);

@@ -173,9 +173,9 @@ export default function Products() {
   }, [products, categoryParam, searchKeyword, activeFilters, selectedCategory]);
 
   // ================= HÀM XỬ LÝ SỰ KIỆN CLICK FILTER =================
-  const toggleFilter = (category: keyof typeof activeFilters, value: any) => {
+  const toggleFilter = (category: keyof typeof activeFilters, value: string | number) => {
     setActiveFilters(prev => {
-      const currentCategory = prev[category] as any[];
+      const currentCategory = prev[category] as (string | number)[];
       if (currentCategory.includes(value)) {
         return { ...prev, [category]: currentCategory.filter(item => item !== value) };
       } else {
@@ -206,7 +206,7 @@ export default function Products() {
 
   const parseSpecifications = (specsString?: string | null) => {
     if (!specsString) return null;
-    try { return JSON.parse(specsString); } catch (e) { return null; }
+    try { return JSON.parse(specsString); } catch { return null; }
   };
 
   return (
