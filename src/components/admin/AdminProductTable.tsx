@@ -55,7 +55,7 @@ export default function AdminProductTable({
           <div className="w-full md:w-64">
             <input
               type="url"
-              placeholder="Dán link Hoàng Hà PC vào đây..."
+              placeholder="Dán link cần lấy dữ liệu sản phẩm vào đây..."
               value={crawlUrl}
               onChange={(e) => setCrawlUrl(e.target.value)} // 🚨 SẼ KHÔNG CÒN BỊ LỖI
               className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
