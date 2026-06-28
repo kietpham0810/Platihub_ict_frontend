@@ -29,7 +29,7 @@ export function useProductBot({ fetchProducts, dialogs }: UseProductBotArgs) {
     setIsBotRunning(true);
     try {
       const response = await fetch(
-        `${buildApiUrl('/bot_sync_hoanghapc.php')}?url=${encodeURIComponent(url)}&offset=${offset}`,
+        `${buildApiUrl('/bot_sync_anphatpc.php')}?url=${encodeURIComponent(url)}&offset=${offset}`,
         { method: 'GET', headers: { Accept: 'application/json' } }
       );
 
