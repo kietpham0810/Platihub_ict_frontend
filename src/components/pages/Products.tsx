@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { API_CONFIG, PRODUCT_CATEGORY_OPTIONS, buildApiUrl } from '../../constants/config';
 
 interface Product {
@@ -21,7 +22,10 @@ const PRODUCT_CATEGORIES = [...PRODUCT_CATEGORY_OPTIONS].sort((a, b) =>
 const ADVANCED_FILTER_CONFIG: Record<string, Record<string, string>> = {
   'PC': { 'Hãng sản xuất': 'manufacturer', 'Nhu cầu': 'Nhu cầu', 'CPU': 'CPU', 'RAM': 'RAM', 'Ổ cứng': 'Ổ cứng' },
   'Laptop': { 'Hãng sản xuất': 'manufacturer', 'CPU': 'CPU', 'RAM': 'RAM', 'Ổ cứng': 'Ổ cứng' },
-  'Màn hình máy tính': { 'Hãng sản xuất': 'manufacturer', 'Kích thước': 'Kích thước', 'Tần số quét': 'Tần số quét', 'Độ phân giải': 'Độ phân giải' },
+  // Khớp với PRODUCT_CATEGORY_OPTIONS trong constants/config.ts (value: 'Màn hình',
+  // không phải 'Màn hình máy tính' - trước đây lệch khiến bộ lọc nâng cao cho
+  // danh mục này không bao giờ hiện ra).
+  'Màn hình': { 'Hãng sản xuất': 'manufacturer', 'Kích thước': 'Kích thước', 'Tần số quét': 'Tần số quét', 'Độ phân giải': 'Độ phân giải' },
   'CPU': { 'Hãng sản xuất': 'manufacturer', 'Socket': 'Socket' },
   'VGA': { 'Hãng sản xuất': 'manufacturer', 'Dung lượng VRAM': 'Dung lượng VRAM' },
   'Tai nghe': { 'Thương hiệu': 'Thương hiệu', 'Kiểu kết nối': 'Kiểu kết nối' },
@@ -63,6 +67,8 @@ const parseSpecs = (product: Product): Record<string, any> => {
 };
 
 export default function Products() {
+  const { t } = useTranslation();
+  const categoryLabel = (value: string) => t(`category.${value}`, { defaultValue: value });
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -224,7 +230,10 @@ export default function Products() {
 
   const clearAllFilters = () => setActiveFilters({});
   const getActiveFilterCount = () => Object.values(activeFilters).reduce((sum, arr) => sum + arr.length, 0);
-  const getCategoryTitle = () => searchKeyword ? `Tìm kiếm: "${searchKeyword}"` : currentCategory || 'Tất cả sản phẩm';
+  const getCategoryTitle = () =>
+    searchKeyword
+      ? t('products.searchTitle', { keyword: searchKeyword })
+      : currentCategory ? categoryLabel(currentCategory) : t('products.allProducts');
 
   return (
     <div className="bg-gray-50 min-h-screen py-8 px-4 md:px-8">
@@ -236,18 +245,18 @@ export default function Products() {
           {currentCategory && (
              <button onClick={() => setIsFilterModalOpen(true)} className="flex items-center gap-2 bg-white border-2 border-blue-600 text-blue-700 px-6 py-2.5 rounded-lg font-bold hover:bg-blue-50 transition-colors shadow-sm">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
-              Bộ lọc {getActiveFilterCount() > 0 && <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">{getActiveFilterCount()}</span>}
+              {t('products.filters')} {getActiveFilterCount() > 0 && <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">{getActiveFilterCount()}</span>}
             </button>
           )}
         </div>
 
         <div className="flex gap-6">
           <div className="hidden lg:flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-fit w-56 gap-2">
-            <h3 className="text-sm font-black text-gray-900 mb-4 uppercase tracking-wide">Danh mục</h3>
-             <button onClick={() => handleCategorySelect(null)} className={`text-left px-4 py-2.5 rounded-lg text-sm font-bold transition-all border ${!currentCategory ? 'bg-blue-600 text-white border-blue-600' : 'text-gray-700 border-gray-200 hover:border-blue-400 hover:bg-blue-50'}`}>Tất cả sản phẩm</button>
+            <h3 className="text-sm font-black text-gray-900 mb-4 uppercase tracking-wide">{t('products.categoriesTitle')}</h3>
+             <button onClick={() => handleCategorySelect(null)} className={`text-left px-4 py-2.5 rounded-lg text-sm font-bold transition-all border ${!currentCategory ? 'bg-blue-600 text-white border-blue-600' : 'text-gray-700 border-gray-200 hover:border-blue-400 hover:bg-blue-50'}`}>{t('products.allProducts')}</button>
             {PRODUCT_CATEGORIES.map(category => (
               <button key={category.value} onClick={() => handleCategorySelect(category.value)} className={`text-left px-4 py-2.5 rounded-lg text-sm font-bold transition-all border ${currentCategory === category.value ? 'bg-blue-600 text-white border-blue-600' : 'text-gray-700 border-gray-200 hover:border-blue-400 hover:bg-blue-50'}`}>
-                {category.label}
+                {categoryLabel(category.value)}
               </button>
             ))}
           </div>
@@ -257,16 +266,16 @@ export default function Products() {
         ) : loadError ? (
           <div className="text-center py-32 bg-white rounded-2xl shadow-sm border border-gray-100 flex-1">
             <div className="text-7xl mb-4 opacity-50">⚠️</div>
-            <h3 className="text-xl font-bold text-gray-800">Không thể tải danh sách sản phẩm</h3>
-            <p className="text-gray-500 mt-2">Đã có lỗi kết nối tới máy chủ. Vui lòng thử lại.</p>
-            <button onClick={() => fetchApprovedProducts()} className="mt-6 text-blue-600 font-bold hover:underline">Thử lại</button>
+            <h3 className="text-xl font-bold text-gray-800">{t('products.loadErrorTitle')}</h3>
+            <p className="text-gray-500 mt-2">{t('products.loadErrorDesc')}</p>
+            <button onClick={() => fetchApprovedProducts()} className="mt-6 text-blue-600 font-bold hover:underline">{t('products.retry')}</button>
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-32 bg-white rounded-2xl shadow-sm border border-gray-100 flex-1">
             <div className="text-7xl mb-4 opacity-50">📭</div>
-            <h3 className="text-xl font-bold text-gray-800">Không tìm thấy sản phẩm phù hợp</h3>
-            <p className="text-gray-500 mt-2">Thử bỏ bớt bộ lọc hoặc thay đổi từ khóa tìm kiếm.</p>
-            <button onClick={clearAllFilters} className="mt-6 text-blue-600 font-bold hover:underline">Xóa tất cả bộ lọc</button>
+            <h3 className="text-xl font-bold text-gray-800">{t('products.noResultsTitle')}</h3>
+            <p className="text-gray-500 mt-2">{t('products.noResultsDesc')}</p>
+            <button onClick={clearAllFilters} className="mt-6 text-blue-600 font-bold hover:underline">{t('products.clearAllFilters')}</button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 flex-1">
@@ -296,9 +305,9 @@ export default function Products() {
                       <span className="text-lg font-black text-[#f26522]">
                         {product.is_price_visible === 1 && product.price
                           ? `${product.price.toLocaleString('vi-VN')} ₫`
-                          : 'Liên hệ'}
+                          : t('products.contactForPrice')}
                       </span>
-                      <Link to={`/product/${product.id}`} className="w-full text-center bg-gray-900 hover:bg-blue-600 text-white font-bold py-2 rounded transition-colors text-sm">Xem chi tiết</Link>
+                      <Link to={`/product/${product.id}`} className="w-full text-center bg-gray-900 hover:bg-blue-600 text-white font-bold py-2 rounded transition-colors text-sm">{t('products.viewDetails')}</Link>
                     </div>
                   </div>
                 </div>
@@ -314,18 +323,20 @@ export default function Products() {
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsFilterModalOpen(false)}></div>
           <div className="relative bg-white w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col animate-fade-in-up">
             <div className="flex justify-between items-center p-5 border-b border-gray-200 bg-gray-50 rounded-t-2xl">
-              <h2 className="text-lg font-black text-gray-900 uppercase tracking-wide">Bộ lọc cho {currentCategory}</h2>
+              <h2 className="text-lg font-black text-gray-900 uppercase tracking-wide">{t('products.filtersFor', { category: currentCategory ? categoryLabel(currentCategory) : '' })}</h2>
               <button onClick={() => setIsFilterModalOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors p-1"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
 
             <div className="p-6 overflow-y-auto flex-1 space-y-8 custom-scrollbar">
               {Object.keys(availableSpecFilters).map(label => (
                 <div key={label}>
-                  <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase">{label}</h3>
+                  <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase">{t(`filterLabel.${label}`, { defaultValue: label })}</h3>
                   <div className="flex flex-wrap gap-2">
                     {(availableSpecFilters[label] as any[]).map((option) => {
                       const value = typeof option === 'object' ? option.value : option;
-                      const displayLabel = typeof option === 'object' ? option.label : option;
+                      const displayLabel = typeof option === 'object'
+                        ? t(`priceRange.${option.label}`, { defaultValue: option.label })
+                        : option;
                       const isActive = (activeFilters[label] || []).includes(value);
 
                       return (
@@ -341,10 +352,10 @@ export default function Products() {
 
             <div className="p-4 border-t border-gray-200 bg-white flex justify-between items-center rounded-b-2xl">
               <button onClick={clearAllFilters} disabled={getActiveFilterCount() === 0} className={`px-6 py-3 font-bold rounded-lg transition-colors ${getActiveFilterCount() > 0 ? 'text-red-500 border border-red-200 hover:bg-red-50' : 'text-gray-400 cursor-not-allowed'}`}>
-                Bỏ chọn ({getActiveFilterCount()})
+                {t('products.clearSelection', { count: getActiveFilterCount() })}
               </button>
               <button onClick={() => setIsFilterModalOpen(false)} className="bg-[#f26522] hover:bg-[#d9531e] text-white px-8 py-3 rounded-lg font-bold shadow-md transition-colors">
-                Xem {filteredProducts.length} kết quả
+                {t('products.viewResults', { count: filteredProducts.length })}
               </button>
             </div>
           </div>

@@ -1,53 +1,55 @@
 
+import { useTranslation } from 'react-i18next';
 import { SITE_CONFIG } from '../../constants/config';
 
 export default function Contact() {
+  const { t } = useTranslation();
   return (
     <section className="py-20 px-6 md:px-12 max-w-7xl mx-auto bg-white">
-      <h2 className="text-3xl md:text-4xl font-extrabold text-[#16223f] mb-12">Yêu cầu thông tin</h2>
-      
+      <h2 className="text-3xl md:text-4xl font-extrabold text-[#16223f] mb-12">{t('contact.title')}</h2>
+
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-16">
-        
+
         {/* ================= CỘT TRÁI: FORM LIÊN HỆ ================= */}
         <div className="lg:col-span-3">
           <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <input type="text" placeholder="Họ và tên" className="w-full border border-gray-300 rounded px-4 py-3 focus:outline-none focus:border-[#f26522] transition-colors" />
-              <input type="email" placeholder="Email" className="w-full border border-gray-300 rounded px-4 py-3 focus:outline-none focus:border-[#f26522] transition-colors" />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <input type="tel" placeholder="Điện thoại" className="w-full border border-gray-300 rounded px-4 py-3 focus:outline-none focus:border-[#f26522] transition-colors" />
-              <input type="text" placeholder="Chức danh (không bắt buộc)" className="w-full border border-gray-300 rounded px-4 py-3 focus:outline-none focus:border-[#f26522] transition-colors" />
+              <input type="text" placeholder={t('contact.fullNamePlaceholder')} className="w-full border border-gray-300 rounded px-4 py-3 focus:outline-none focus:border-[#f26522] transition-colors" />
+              <input type="email" placeholder={t('contact.emailPlaceholder')} className="w-full border border-gray-300 rounded px-4 py-3 focus:outline-none focus:border-[#f26522] transition-colors" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <input type="text" placeholder="Công ty / Tổ chức (không bắt buộc)" className="w-full border border-gray-300 rounded px-4 py-3 focus:outline-none focus:border-[#f26522] transition-colors" />
+              <input type="tel" placeholder={t('contact.phonePlaceholder')} className="w-full border border-gray-300 rounded px-4 py-3 focus:outline-none focus:border-[#f26522] transition-colors" />
+              <input type="text" placeholder={t('contact.titlePlaceholder')} className="w-full border border-gray-300 rounded px-4 py-3 focus:outline-none focus:border-[#f26522] transition-colors" />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <input type="text" placeholder={t('contact.companyPlaceholder')} className="w-full border border-gray-300 rounded px-4 py-3 focus:outline-none focus:border-[#f26522] transition-colors" />
               <select className="w-full border border-gray-300 rounded px-4 py-3 focus:outline-none focus:border-[#f26522] transition-colors bg-white text-gray-500">
-                <option value="">Chọn loại dịch vụ</option>
-                <option value="ict">Phân phối thiết bị ICT</option>
-                <option value="software">Phát triển phần mềm</option>
+                <option value="">{t('contact.selectServiceType')}</option>
+                <option value="ict">{t('contact.serviceIct')}</option>
+                <option value="software">{t('contact.serviceSoftware')}</option>
               </select>
             </div>
 
-            <textarea placeholder="Lời nhắn (không bắt buộc)" rows={5} className="w-full border border-gray-300 rounded px-4 py-3 focus:outline-none focus:border-[#f26522] transition-colors resize-y"></textarea>
-            
+            <textarea placeholder={t('contact.messagePlaceholder')} rows={5} className="w-full border border-gray-300 rounded px-4 py-3 focus:outline-none focus:border-[#f26522] transition-colors resize-y"></textarea>
+
             <button type="submit" className="bg-[#f26522] hover:bg-[#d9531e] text-white font-bold py-3 px-10 rounded transition-colors shadow-md">
-              Gửi đi
+              {t('contact.send')}
             </button>
           </form>
         </div>
 
         {/* ================= CỘT PHẢI: THÔNG TIN CẤU HÌNH ĐỘNG ================= */}
         <div className="lg:col-span-2 text-gray-700 space-y-8">
-          
+
           <div>
-            <h4 className="font-bold text-gray-900 mb-2">Địa chỉ</h4>
+            <h4 className="font-bold text-gray-900 mb-2">{t('contact.addressLabel')}</h4>
             <p className="leading-relaxed">{SITE_CONFIG.address}</p>
           </div>
 
           <div>
-            <h4 className="font-bold text-gray-900 mb-2">Email :</h4>
+            <h4 className="font-bold text-gray-900 mb-2">{t('contact.emailLabel')}</h4>
             <div className="flex flex-col space-y-1">
               {SITE_CONFIG.emails.map((email, idx) => (
                 <a key={idx} href={`mailto:${email}`} className="hover:text-[#f26522] transition-colors">{email}</a>
@@ -56,7 +58,7 @@ export default function Contact() {
           </div>
 
           <div>
-            <h4 className="font-bold text-gray-900 mb-2">Điện thoại :</h4>
+            <h4 className="font-bold text-gray-900 mb-2">{t('contact.phoneLabel')}</h4>
             <div className="flex flex-col space-y-1">
               {SITE_CONFIG.phones.map((phone, idx) => (
                 <a key={idx} href={`tel:${phone}`} className="hover:text-[#f26522] transition-colors">{phone}</a>
@@ -65,7 +67,7 @@ export default function Contact() {
           </div>
 
           <div>
-            <h4 className="font-bold text-gray-900 mb-2">Thời gian làm việc :</h4>
+            <h4 className="font-bold text-gray-900 mb-2">{t('contact.workingHoursLabel')}</h4>
             <p>{SITE_CONFIG.workingHours}</p>
           </div>
 

@@ -41,11 +41,11 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
   if (!shouldRender) return null;
 
   const productCategories = [
-    { name: 'Tất cả sản phẩm', path: '/san-pham' },
-    { name: 'Thiết bị máy tính', path: '/san-pham?category=pc' },
-    { name: 'Linh kiện, thiết bị ngoại vi', path: '/san-pham?category=components' },
-    { name: 'Điện thoại, thiết bị thông minh', path: '/san-pham?category=mobile' },
-    { name: 'Giải pháp CNTT', path: '/san-pham?category=solutions' }
+    { name: t('menu.allProducts'), path: '/san-pham' },
+    { name: t('menu.computerEquipment'), path: '/san-pham?category=pc' },
+    { name: t('menu.peripherals'), path: '/san-pham?category=components' },
+    { name: t('menu.mobileDevices'), path: '/san-pham?category=mobile' },
+    { name: t('menu.itSolutions'), path: '/san-pham?category=solutions' }
   ];
 
   return (
@@ -74,7 +74,7 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
         <button
           onClick={onClose}
           className="mt-4 md:mt-0 w-12 h-12 rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-xl transition-all duration-300"
-          aria-label="Close menu"
+          aria-label={i18n.language === 'vn' ? 'Đóng menu' : 'Close menu'}
         >
           ✕
         </button>
@@ -153,7 +153,7 @@ export default function MegaMenu({ isOpen, onClose }: MegaMenuProps) {
         <div className={`relative overflow-hidden transition-all duration-500 delay-400 ${isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} bg-white border border-slate-200/80 rounded-[28px] p-8 shadow-[0_35px_80px_-45px_rgba(15,23,42,0.18)]`}>
           <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-slate-100 to-transparent opacity-80" />
           <div className="relative flex flex-col gap-4">
-            <p className="text-sm uppercase tracking-[0.22em] text-slate-500">Language</p>
+            <p className="text-sm uppercase tracking-[0.22em] text-slate-500">{t('menu.language')}</p>
             <button
               onClick={() => changeLanguage('vn')}
               className={`flex items-center justify-between gap-3 w-full rounded-2xl border px-4 py-3 transition-all duration-300 ${

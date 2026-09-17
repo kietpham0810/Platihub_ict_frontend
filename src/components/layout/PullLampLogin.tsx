@@ -27,6 +27,9 @@ export default function PullLampLogin({
   onSubmit,
   isSubmitting = false,
 }: PullLampLoginProps) {
+  // Cố định tiếng Việt, không theo i18n.language của trang public: khu vực
+  // admin không cần đa ngôn ngữ, và tránh trường hợp khách vừa đổi site sang
+  // 'en' khiến admin (người Việt) mở form đăng nhập thấy toàn tiếng Anh.
   const [lit, setLit] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [dragY, setDragY] = useState(0);

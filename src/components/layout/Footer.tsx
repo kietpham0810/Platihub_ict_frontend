@@ -1,7 +1,9 @@
 
+import { useTranslation } from 'react-i18next';
 import logo from '../../assets/images/logo.jpg';
 
 export default function Footer() {
+  const { t } = useTranslation();
   return (
     <footer className="bg-white text-gray-700 py-16 px-6 md:px-12 border-t border-gray-200">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between gap-12">
@@ -19,11 +21,11 @@ export default function Footer() {
           </div>
           
           <h3 className="text-xl md:text-2xl font-bold text-gray-800 leading-snug mb-8">
-            Global IT solutions & <br /> services.
+            {t('footer.tagline')}
           </h3>
-          
+
           <div className="flex flex-col gap-4">
-            <p className="text-gray-600 text-lg">Connect with us</p>
+            <p className="text-gray-600 text-lg">{t('footer.connectWithUs')}</p>
             <div className="flex gap-4">
               
               {/* Nút Facebook đã gắn Link và cấu hình chuẩn Security */}
@@ -60,14 +62,14 @@ export default function Footer() {
         <div className="flex flex-col text-gray-600 text-base md:text-lg space-y-6 max-w-xl">
           
           <div className="flex items-start gap-3">
-            <span className="font-medium text-gray-800 w-20 shrink-0">Address:</span>
+            <span className="font-medium text-gray-800 w-20 shrink-0">{t('footer.address')}</span>
             <p className="leading-relaxed">
               159C De Tham Street, Cau Ong Lanh Ward, Ho Chi Minh City, Vietnam
             </p>
           </div>
 
           <div className="flex items-start gap-3">
-            <span className="font-medium text-gray-800 w-20 shrink-0">Email:</span>
+            <span className="font-medium text-gray-800 w-20 shrink-0">{t('footer.email')}</span>
             <div className="flex flex-col space-y-1">
               <a href="mailto:software@platihub.com" className="hover:text-blue-600 transition-colors">software@platihub.com</a>
               <a href="mailto:ict@platihub.com" className="hover:text-blue-600 transition-colors">ict@platihub.com</a>
@@ -76,7 +78,7 @@ export default function Footer() {
           </div>
 
           <div className="flex items-start gap-3">
-            <span className="font-medium text-gray-800 w-20 shrink-0">Phone:</span>
+            <span className="font-medium text-gray-800 w-20 shrink-0">{t('footer.phone')}</span>
             <a href="tel:+84918227719" className="hover:text-blue-600 transition-colors">
               +84918227719
             </a>

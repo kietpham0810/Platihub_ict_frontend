@@ -41,7 +41,7 @@ export default function Header() {
   useEffect(() => {
     if (new URLSearchParams(location.search).get('admin_auth_required') === '1') {
       setIsLoginOpen(true);
-      setLoginError('Vui lòng đăng nhập để truy cập trang quản trị.');
+      setLoginError('Vui lòng đăng nhập để truy cập trang quản trị.'); // Cố định tiếng Việt - luồng đăng nhập admin nội bộ.
       navigate(location.pathname, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -67,6 +67,7 @@ export default function Header() {
         setLoginError('');
         navigate('/admin');
       } else {
+        // Cố định tiếng Việt (không theo i18n.language) - đây là khu vực admin nội bộ.
         setLoginError(result.message || 'Tài khoản hoặc mật khẩu không chính xác!');
       }
     } catch {
@@ -185,18 +186,18 @@ export default function Header() {
             </Link>
 
             <div className="hidden lg:flex items-center gap-6 mr-4 border-l border-gray-300 pl-6 h-8">
-              <Link to="/" className="flex items-center gap-2 text-gray-800 hover:text-[#f26522] font-bold uppercase text-sm tracking-wider transition-colors group">Trang chủ</Link>
-              <a href={isHomePage ? "#about" : "/#about"} className="flex items-center gap-2 text-gray-800 hover:text-[#f26522] font-bold uppercase text-sm tracking-wider transition-colors group">Về chúng tôi</a>
-              <Link to="/san-pham" className="flex items-center gap-2 text-gray-800 hover:text-[#f26522] font-bold uppercase text-sm tracking-wider transition-colors group">Sản phẩm</Link>
+              <Link to="/" className="flex items-center gap-2 text-gray-800 hover:text-[#f26522] font-bold uppercase text-sm tracking-wider transition-colors group">{t('menu.home')}</Link>
+              <a href={isHomePage ? "#about" : "/#about"} className="flex items-center gap-2 text-gray-800 hover:text-[#f26522] font-bold uppercase text-sm tracking-wider transition-colors group">{t('menu.about')}</a>
+              <Link to="/san-pham" className="flex items-center gap-2 text-gray-800 hover:text-[#f26522] font-bold uppercase text-sm tracking-wider transition-colors group">{t('menu.products')}</Link>
             </div>
 
-            <button onClick={() => setIsMenuOpen(true)} className="text-gray-800 hover:text-[#f26522] transition-colors focus:outline-none flex items-center group shrink-0" aria-label="Mở menu">
+            <button onClick={() => setIsMenuOpen(true)} className="text-gray-800 hover:text-[#f26522] transition-colors focus:outline-none flex items-center group shrink-0" aria-label={i18n.language === 'vn' ? 'Mở menu' : 'Open menu'}>
               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
 
             <div className="hidden md:block w-px h-6 bg-gray-300 mx-2"></div>
 
-            <button onClick={() => setIsLoginOpen(true)} className="hidden md:flex text-gray-700 hover:text-[#f26522] transition-colors items-center shrink-0" title={i18n.language === 'vn' ? 'Quản trị viên' : 'Admin'}>
+            <button onClick={() => setIsLoginOpen(true)} className="hidden md:flex text-gray-700 hover:text-[#f26522] transition-colors items-center shrink-0" title={t('header.adminTooltip')}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
             </button>
           </div>
@@ -218,7 +219,7 @@ export default function Header() {
                     navigate(`/san-pham?search=${encodeURIComponent(searchQuery.trim())}`);
                   }
                 }}
-                placeholder={i18n.language === 'vn' ? 'Tìm kiếm linh kiện, máy tính...' : 'Search...'} 
+                placeholder={t('header.searchPlaceholder')}
                 className="w-full bg-white text-gray-700 rounded-full py-2.5 pl-6 pr-12 focus:outline-none focus:ring-2 focus:ring-[#f26522] border border-gray-300 transition-all shadow-sm" 
               />
               <button 
@@ -236,10 +237,10 @@ export default function Header() {
               {showSuggestions && (
                 <div className="absolute top-[110%] left-0 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[70] animate-fade-in-up">
                   {searchResults.length === 0 ? (
-                    <div className="py-6 text-center text-gray-500 text-sm">Không tìm thấy sản phẩm nào khớp với "{searchQuery}"</div>
+                    <div className="py-6 text-center text-gray-500 text-sm">{t('header.noResultsFor', { query: searchQuery })}</div>
                   ) : (
                     <div className="flex flex-col">
-                      <div className="px-4 py-2 bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">Gợi ý sản phẩm</div>
+                      <div className="px-4 py-2 bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">{t('header.suggestions')}</div>
                       <ul className="max-h-[350px] overflow-y-auto">
                         {searchResults.map((item, index) => {
                           const terms = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -267,18 +268,18 @@ export default function Header() {
                                     <h4 className="text-sm font-bold text-gray-800 group-hover:text-[#f26522] line-clamp-1">{item.product_name}</h4>
                                     {index === 0 && (
                                       <span className="text-[10px] uppercase font-black tracking-[0.2em] text-[#f26522] bg-[#fff1e5] border border-[#f9dcc7] px-2 py-1 rounded-full">
-                                        Top match
+                                        {t('header.topMatch')}
                                       </span>
                                     )}
                                   </div>
                                   <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] uppercase text-gray-500">
-                                    <span className="font-bold bg-gray-100 px-2 py-0.5 rounded-sm">{item.product_type}</span>
+                                    <span className="font-bold bg-gray-100 px-2 py-0.5 rounded-sm">{t(`category.${item.product_type}`, { defaultValue: item.product_type })}</span>
                                     {item.manufacturer && <span className="font-bold bg-gray-100 px-2 py-0.5 rounded-sm">{item.manufacturer}</span>}
                                   </div>
                                   <div className="mt-2 text-sm text-slate-600">
                                     {getSuggestionSnippet(item, terms)}
                                   </div>
-                                  <div className="mt-2 text-sm font-black text-[#f26522]">Chi tiết &rarr;</div>
+                                  <div className="mt-2 text-sm font-black text-[#f26522]">{t('header.viewDetail')}</div>
                                 </div>
                               </Link>
                             </li>
@@ -292,7 +293,7 @@ export default function Header() {
                         }} 
                         className="block w-full bg-gray-50 hover:bg-gray-100 text-center py-3 text-sm font-bold text-[#16223f] transition-colors border-t border-gray-100"
                       >
-                        Xem tất cả kết quả cho "{searchQuery}" &rarr;
+                        {t('header.viewAllResultsFor', { query: searchQuery })}
                       </button>
                     </div>
                   )}
