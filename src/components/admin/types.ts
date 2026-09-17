@@ -71,3 +71,14 @@ export interface FilteredCrawlResult {
   total_links_in_category: number;
   reached_target: boolean;
 }
+
+export interface FilteredCrawlProgress {
+  scanned: number;
+  scan_limit: number;
+  new_inserted: number;
+  updated_specifications: number;
+  excluded: number;
+  filtered_out: number;
+  want_count: number;
+  total_links_in_category: number;
+}

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { API_CONFIG, buildApiUrl } from '../../../constants/config';
-import type { CrawlCategoryNode, CrawlCategoryTree, FilteredCrawlResult } from '../types';
+import type { CrawlCategoryNode, CrawlCategoryTree, FilteredCrawlProgress, FilteredCrawlResult } from '../types';
 
 interface FilteredCrawlModalProps {
   onDone: () => void; // gọi lại fetchProducts() sau khi cào xong, để tab "Chờ duyệt" cập nhật ngay
@@ -40,7 +40,9 @@ export default function FilteredCrawlModal({ onDone }: FilteredCrawlModalProps) 
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<FilteredCrawlResult | null>(null);
+  const [progress, setProgress] = useState<FilteredCrawlProgress | null>(null);
   const [error, setError] = useState('');
+  const startTimeRef = useRef(0);
 
   useEffect(() => {
     if (!isOpen || Object.keys(tree).length > 0) return;
@@ -108,6 +110,7 @@ export default function FilteredCrawlModal({ onDone }: FilteredCrawlModalProps) 
     setPriceMax('');
     setQuantity('20');
     setResult(null);
+    setProgress(null);
     setError('');
   };
 
@@ -115,6 +118,32 @@ export default function FilteredCrawlModal({ onDone }: FilteredCrawlModalProps) 
     if (isSubmitting) return;
     setIsOpen(false);
     resetForm();
+  };
+
+  // Ước tính thời gian còn lại: dựa trên tốc độ quét trung bình (giây/sản
+  // phẩm đã quét) x số sản phẩm ước tính còn phải quét nữa mới đủ số lượng
+  // yêu cầu (suy ra từ tỉ lệ "khớp bộ lọc" quan sát được tính tới thời điểm
+  // hiện tại).
+  const estimateEtaSeconds = (p: FilteredCrawlProgress): number | null => {
+    if (p.scanned === 0) return null;
+    const elapsedSec = (Date.now() - startTimeRef.current) / 1000;
+    const avgPerItem = elapsedSec / p.scanned;
+    const remainingWanted = Math.max(0, p.want_count - p.new_inserted);
+    if (remainingWanted === 0) return 0;
+
+    const hitRate = p.new_inserted / p.scanned;
+    const remainingScansEstimate =
+      hitRate > 0 ? remainingWanted / hitRate : Math.max(0, p.scan_limit - p.scanned);
+
+    return Math.round(avgPerItem * remainingScansEstimate);
+  };
+
+  const formatEta = (seconds: number) => {
+    if (seconds <= 0) return 'sắp xong';
+    if (seconds < 60) return `~${seconds}s`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `~${m}p${s > 0 ? ` ${s}s` : ''}`;
   };
 
   const handleSubmit = async () => {
@@ -125,6 +154,8 @@ export default function FilteredCrawlModal({ onDone }: FilteredCrawlModalProps) 
     setIsSubmitting(true);
     setError('');
     setResult(null);
+    setProgress(null);
+    startTimeRef.current = Date.now();
 
     try {
       const res = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.CRAWL_FILTERED), {
@@ -139,13 +170,50 @@ export default function FilteredCrawlModal({ onDone }: FilteredCrawlModalProps) 
           ram,
         }),
       });
-      const data = await res.json();
 
-      if (data.status === 'success') {
-        setResult(data.data);
+      if (!res.body) {
+        throw new Error('no-stream');
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let finalResult: FilteredCrawlResult | null = null;
+      let finalError = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let obj: Record<string, unknown>;
+          try {
+            obj = JSON.parse(line);
+          } catch {
+            continue;
+          }
+
+          if (obj.type === 'progress') {
+            setProgress(obj as unknown as FilteredCrawlProgress);
+          } else if (obj.type === 'result') {
+            if (obj.status === 'success') {
+              finalResult = obj.data as FilteredCrawlResult;
+            } else {
+              finalError = (obj.message as string) || 'Không cào được sản phẩm nào khớp bộ lọc.';
+            }
+          }
+        }
+      }
+
+      if (finalResult) {
+        setResult(finalResult);
         onDone();
       } else {
-        setError(data.message || 'Không cào được sản phẩm nào khớp bộ lọc.');
+        setError(finalError || 'Không nhận được kết quả từ máy chủ.');
       }
     } catch {
       setError('Lỗi kết nối tới máy chủ. Vui lòng thử lại.');
@@ -249,6 +317,33 @@ export default function FilteredCrawlModal({ onDone }: FilteredCrawlModalProps) 
                     </div>
                   </div>
 
+                  {isSubmitting && progress && (
+                    <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 space-y-2">
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-sm font-bold text-blue-800">
+                          {progress.new_inserted}/{progress.want_count} sản phẩm mới
+                        </span>
+                        <span className="text-xs font-semibold text-blue-500">
+                          {(() => {
+                            const eta = estimateEtaSeconds(progress);
+                            return eta === null ? 'đang tính...' : `Còn ${formatEta(eta)}`;
+                          })()}
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-blue-100 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-blue-600 transition-all duration-200"
+                          style={{ width: `${Math.min(100, Math.round((progress.new_inserted / Math.max(1, progress.want_count)) * 100))}%` }}
+                        />
+                      </div>
+                      <p className="text-[11px] text-blue-500">
+                        Đã quét {progress.scanned}/{progress.scan_limit} sản phẩm ứng viên
+                        {progress.excluded > 0 && ` · bỏ qua ${progress.excluded} quảng cáo/KM`}
+                        {progress.filtered_out > 0 && ` · ${progress.filtered_out} không khớp bộ lọc`}
+                      </p>
+                    </div>
+                  )}
+
                   {error && <div className="bg-red-50 text-red-600 text-sm px-3 py-2.5 rounded-lg border border-red-100">{error}</div>}
 
                   {result && (
@@ -272,7 +367,7 @@ export default function FilteredCrawlModal({ onDone }: FilteredCrawlModalProps) 
                         <path d="M21 12a9 9 0 00-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                       </svg>
                     )}
-                    {isSubmitting ? 'Đang cào dữ liệu...' : 'Bắt đầu cào'}
+                    {isSubmitting ? 'Đang cào...' : 'Bắt đầu cào'}
                   </button>
                 </>
               )}
