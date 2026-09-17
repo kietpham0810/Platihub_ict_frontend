@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { API_CONFIG, buildApiUrl } from '../../../constants/config';
+import { API_CONFIG, adminAuthHeaders, buildApiUrl } from '../../../constants/config';
 import type { CrawlCategoryNode, CrawlCategoryTree, FilteredCrawlProgress, FilteredCrawlResult } from '../types';
 
 interface FilteredCrawlModalProps {
   onDone: () => void; // gọi lại fetchProducts() sau khi cào xong, để tab "Chờ duyệt" cập nhật ngay
+  onSessionExpired: () => void;
 }
 
 const CHIP_OPTIONS = [
@@ -24,7 +25,7 @@ const RAM_OPTIONS = [
   { label: '64GB', value: '64gb' },
 ];
 
-export default function FilteredCrawlModal({ onDone }: FilteredCrawlModalProps) {
+export default function FilteredCrawlModal({ onDone, onSessionExpired }: FilteredCrawlModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [tree, setTree] = useState<CrawlCategoryTree>({});
   const [isLoadingTree, setIsLoadingTree] = useState(false);
@@ -160,7 +161,7 @@ export default function FilteredCrawlModal({ onDone }: FilteredCrawlModalProps) 
     try {
       const res = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.CRAWL_FILTERED), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...adminAuthHeaders() },
         body: JSON.stringify({
           url: targetUrl,
           quantity: Number(quantity) || 20,
@@ -170,6 +171,11 @@ export default function FilteredCrawlModal({ onDone }: FilteredCrawlModalProps) 
           ram,
         }),
       });
+
+      if (res.status === 401) {
+        onSessionExpired();
+        return;
+      }
 
       if (!res.body) {
         throw new Error('no-stream');

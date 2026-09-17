@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { API_CONFIG, buildApiUrl } from '../../../constants/config';
+import { API_CONFIG, adminAuthHeaders, buildApiUrl } from '../../../constants/config';
 import { EMPTY_FORM_DATA, type ProductFormData, type SpecField } from '../types';
 
 interface UseProductFormArgs {
   fetchProducts: () => Promise<void>;
   showSuccess: (title: string, message: string) => void;
   showError: (title: string, message: string) => void;
+  onSessionExpired: () => void;
 }
 
-const IMGUR_CLIENT_ID = '139e72807f61c3c';
+// Client ID Imgur công khai (dùng cho upload ẩn danh, không phải secret bí
+// mật) nhưng vẫn nên cấu hình qua env thay vì hard-code trong source.
+const IMGUR_CLIENT_ID = import.meta.env.VITE_IMGUR_CLIENT_ID || '139e72807f61c3c';
 
-export function useProductForm({ fetchProducts, showSuccess, showError }: UseProductFormArgs) {
+export function useProductForm({ fetchProducts, showSuccess, showError, onSessionExpired }: UseProductFormArgs) {
   const [formData, setFormData] = useState<ProductFormData>(EMPTY_FORM_DATA);
   const [imageInputMode, setImageInputMode] = useState<'url' | 'upload'>('url');
   const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
@@ -78,9 +81,15 @@ export function useProductForm({ fetchProducts, showSuccess, showError }: UsePro
     try {
       const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.ADD_PRODUCT), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...adminAuthHeaders() },
         body: JSON.stringify(payload),
       });
+
+      if (response.status === 401) {
+        onSessionExpired();
+        return;
+      }
+
       const result = await response.json();
       if (result.status === 'success') {
         setFormData(EMPTY_FORM_DATA);

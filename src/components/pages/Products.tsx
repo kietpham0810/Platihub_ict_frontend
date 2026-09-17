@@ -10,6 +10,7 @@ interface Product {
   manufacturer: string;
   product_type: string;
   price?: number | null;
+  is_price_visible?: number;
   specifications?: string | Record<string, any> | null;
 }
 
@@ -64,6 +65,7 @@ const parseSpecs = (product: Product): Record<string, any> => {
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<Record<string, (string | number)[]>>({});
   const [deadImageIds, setDeadImageIds] = useState<Set<string>>(new Set());
@@ -71,25 +73,31 @@ export default function Products() {
   const categoryParam = searchParams.get('category');
   const searchKeyword = searchParams.get('search');
 
-  useEffect(() => {
-    const fetchApprovedProducts = async () => {
-      setIsLoading(true);
-      try {
-        const apiUrl = `${buildApiUrl(API_CONFIG.ENDPOINTS.GET_PRODUCTS)}?status=approved`;
-        const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error('Lỗi kết nối mạng');
+  const fetchApprovedProducts = async () => {
+    setIsLoading(true);
+    setLoadError(false);
+    try {
+      const apiUrl = `${buildApiUrl(API_CONFIG.ENDPOINTS.GET_PRODUCTS)}?status=approved`;
+      const response = await fetch(apiUrl);
+      if (!response.ok) throw new Error('Lỗi kết nối mạng');
 
-        const data = await response.json();
-        if (data.status === 'success') {
-          setProducts(data.data);
-        }
-      } catch (error) {
-        console.error("Lỗi tải sản phẩm:", error);
-      } finally {
-        setIsLoading(false);
+      const data = await response.json();
+      if (data.status === 'success') {
+        setProducts(data.data);
+      } else {
+        setLoadError(true);
       }
-    };
+    } catch (error) {
+      console.error("Lỗi tải sản phẩm:", error);
+      setLoadError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchApprovedProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCategorySelect = (categoryValue: string | null) => {
@@ -246,6 +254,13 @@ export default function Products() {
 
         {isLoading ? (
           <div className="flex justify-center py-32"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div></div>
+        ) : loadError ? (
+          <div className="text-center py-32 bg-white rounded-2xl shadow-sm border border-gray-100 flex-1">
+            <div className="text-7xl mb-4 opacity-50">⚠️</div>
+            <h3 className="text-xl font-bold text-gray-800">Không thể tải danh sách sản phẩm</h3>
+            <p className="text-gray-500 mt-2">Đã có lỗi kết nối tới máy chủ. Vui lòng thử lại.</p>
+            <button onClick={() => fetchApprovedProducts()} className="mt-6 text-blue-600 font-bold hover:underline">Thử lại</button>
+          </div>
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-32 bg-white rounded-2xl shadow-sm border border-gray-100 flex-1">
             <div className="text-7xl mb-4 opacity-50">📭</div>
@@ -278,7 +293,11 @@ export default function Products() {
                       {specKeys.map(key => <span key={key} className="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded border border-gray-200 truncate max-w-full">{specs[key]}</span>)}
                     </div>
                     <div className="mt-auto flex flex-col gap-3">
-                      <span className="text-lg font-black text-[#f26522]">{product.price ? `${product.price.toLocaleString('vi-VN')} ₫` : 'Liên hệ'}</span>
+                      <span className="text-lg font-black text-[#f26522]">
+                        {product.is_price_visible === 1 && product.price
+                          ? `${product.price.toLocaleString('vi-VN')} ₫`
+                          : 'Liên hệ'}
+                      </span>
                       <Link to={`/product/${product.id}`} className="w-full text-center bg-gray-900 hover:bg-blue-600 text-white font-bold py-2 rounded transition-colors text-sm">Xem chi tiết</Link>
                     </div>
                   </div>

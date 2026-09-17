@@ -9,6 +9,7 @@ interface PullLampLoginProps {
   setPassword: (v: string) => void;
   loginError: string;
   onSubmit: (e: React.FormEvent) => void;
+  isSubmitting?: boolean;
 }
 
 const PULL_THRESHOLD = 34;
@@ -24,6 +25,7 @@ export default function PullLampLogin({
   setPassword,
   loginError,
   onSubmit,
+  isSubmitting = false,
 }: PullLampLoginProps) {
   const [lit, setLit] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -319,9 +321,10 @@ export default function PullLampLogin({
               <button
                 type="submit"
                 tabIndex={lit ? 0 : -1}
-                className="w-full py-3 rounded-lg font-bold text-sm text-[#08080a] bg-[#f26522] hover:bg-[#ff7638] transition-colors"
+                disabled={isSubmitting}
+                className="w-full py-3 rounded-lg font-bold text-sm text-[#08080a] bg-[#f26522] hover:bg-[#ff7638] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Đăng nhập
+                {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </button>
             </form>
           </div>

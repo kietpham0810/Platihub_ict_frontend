@@ -74,7 +74,8 @@ export const API_CONFIG = {
         APPROVE_PRODUCT: '/approve_product.php',
         HIDE_PRODUCT: '/hide_product.php',
         GET_CONFIGS: '/get_configs.php',
-        CRAWL_FILTERED: '/crawl_filtered.php'
+        CRAWL_FILTERED: '/crawl_filtered.php',
+        ADMIN_LOGIN: '/admin_login.php'
     }
 } as const;
 
@@ -83,18 +84,22 @@ export const API_CONFIG = {
  * Tự động xử lý triệt để lỗi double slash (//) nếu BASE_URL hoặc ENDPOINT bị dư dấu '/'.
  */
 // ==========================================
-// 3. CẤU HÌNH ĐĂNG NHẬP ADMIN (TẠM THỜI - PHÍA FRONTEND)
+// 3. ĐĂNG NHẬP ADMIN (XÁC THỰC Ở BACKEND)
 // ==========================================
-// LƯU Ý BẢO MẬT: Đây chỉ là lớp chặn UI tạm thời. Vì thông tin đăng nhập
-// vẫn nằm trong bundle JS gửi tới trình duyệt nên KHÔNG an toàn cho môi
-// trường thật. Cần chuyển sang xác thực phía backend (JWT/session) sớm
-// nhất có thể - xem bug.txt mục Bảo mật #1, #2.
-export const ADMIN_AUTH = {
-  USERNAME: import.meta.env.VITE_ADMIN_USERNAME || '',
-  PASSWORD: import.meta.env.VITE_ADMIN_PASSWORD || '',
-} as const;
+// Username/password được kiểm tra ở backend (api/admin_login.php), không
+// còn nằm trong bundle JS. Sau khi đăng nhập thành công, backend trả về 1
+// token có hạn (12h) - lưu token này ở sessionStorage và gửi kèm header
+// Authorization: Bearer <token> ở mọi request ghi/xóa dữ liệu.
+export const ADMIN_SESSION_KEY = 'platihub_admin_token';
 
-export const ADMIN_SESSION_KEY = 'platihub_admin_session';
+export const getAdminToken = (): string | null => sessionStorage.getItem(ADMIN_SESSION_KEY);
+
+export const clearAdminToken = (): void => sessionStorage.removeItem(ADMIN_SESSION_KEY);
+
+export const adminAuthHeaders = (): Record<string, string> => {
+  const token = getAdminToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 export const buildApiUrl = (endpoint: string): string => {
     if (!endpoint) return API_CONFIG.BASE_URL;

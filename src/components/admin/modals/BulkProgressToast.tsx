@@ -5,6 +5,7 @@ interface BulkProgressToastProps {
   type: ConfirmType | null;
   current: number;
   total: number;
+  errorCount: number;
   lastNames: string[];
 }
 
@@ -14,7 +15,7 @@ const LABELS: Record<string, { verb: string; done: string }> = {
   delete: { verb: 'Đang xóa sản phẩm', done: 'Đã xóa xong' },
 };
 
-export default function BulkProgressToast({ active, type, current, total, lastNames }: BulkProgressToastProps) {
+export default function BulkProgressToast({ active, type, current, total, errorCount, lastNames }: BulkProgressToastProps) {
   if (!active || !type || total === 0) return null;
 
   const pct = Math.round((current / total) * 100);
@@ -63,6 +64,7 @@ export default function BulkProgressToast({ active, type, current, total, lastNa
         <span>
           {current}
           <span style={{ color: '#5b5b63' }}>/{total}</span>
+          {errorCount > 0 && <span style={{ color: '#ef5a5a' }}> · {errorCount} lỗi</span>}
         </span>
         <span>{pct}%</span>
       </div>

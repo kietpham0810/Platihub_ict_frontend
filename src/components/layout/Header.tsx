@@ -5,7 +5,7 @@ import MegaMenu from './MegaMenu';
 import PullLampLogin from './PullLampLogin';
 import logo from '../../assets/images/logo.jpg';
 // BƯỚC 1: IMPORT CONFIG API
-import { ADMIN_AUTH, ADMIN_SESSION_KEY, API_CONFIG, buildApiUrl } from '../../constants/config';
+import { ADMIN_SESSION_KEY, API_CONFIG, buildApiUrl } from '../../constants/config';
 
 interface SearchResult {
   id: string;
@@ -23,6 +23,7 @@ export default function Header() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // STATES TÌM KIẾM THÔNG MINH
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,17 +36,43 @@ export default function Header() {
   const navigate = useNavigate();
   const isHomePage = location.pathname === '/';
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Bị RequireAdminAuth đá về đây do chưa đăng nhập/hết phiên -> mở sẵn form
+  // đăng nhập kèm lý do, thay vì chuyển hướng câm lặng không giải thích gì.
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('admin_auth_required') === '1') {
+      setIsLoginOpen(true);
+      setLoginError('Vui lòng đăng nhập để truy cập trang quản trị.');
+      navigate(location.pathname, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === ADMIN_AUTH.USERNAME && password === ADMIN_AUTH.PASSWORD) {
-      sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
-      setIsLoginOpen(false);
-      setUsername('');
-      setPassword('');
-      setLoginError('');
-      navigate('/admin');
-    } else {
-      setLoginError('Tài khoản hoặc mật khẩu không chính xác!');
+    setLoginError('');
+    setIsLoggingIn(true);
+    try {
+      const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.ADMIN_LOGIN), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const result = await response.json();
+
+      if (result.status === 'success' && result.token) {
+        sessionStorage.setItem(ADMIN_SESSION_KEY, result.token);
+        setIsLoginOpen(false);
+        setUsername('');
+        setPassword('');
+        setLoginError('');
+        navigate('/admin');
+      } else {
+        setLoginError(result.message || 'Tài khoản hoặc mật khẩu không chính xác!');
+      }
+    } catch {
+      setLoginError('Lỗi kết nối máy chủ. Vui lòng thử lại.');
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -302,6 +329,7 @@ export default function Header() {
         setPassword={setPassword}
         loginError={loginError}
         onSubmit={handleLogin}
+        isSubmitting={isLoggingIn}
       />
     </header>
   );

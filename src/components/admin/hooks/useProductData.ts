@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { API_CONFIG, PRODUCT_CATEGORY_OPTIONS, buildApiUrl } from '../../../constants/config';
+import { useNavigate } from 'react-router-dom';
+import { API_CONFIG, PRODUCT_CATEGORY_OPTIONS, adminAuthHeaders, buildApiUrl, clearAdminToken } from '../../../constants/config';
 import {
   EMPTY_FORM_DATA,
   type Product,
@@ -15,6 +16,16 @@ interface DialogHelpers {
 }
 
 export function useProductData({ showSuccess, showError }: DialogHelpers) {
+  const navigate = useNavigate();
+
+  // Phiên đăng nhập admin hết hạn (token quá 12h) hoặc không hợp lệ -> đăng
+  // xuất và đưa về trang chủ, thay vì để mọi request tiếp theo âm thầm trả 401.
+  const handleSessionExpired = () => {
+    clearAdminToken();
+    showError('Phiên đăng nhập hết hạn', 'Vui lòng đăng nhập lại để tiếp tục.');
+    navigate('/');
+  };
+
   const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
   const [approvedProducts, setApprovedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -41,16 +52,27 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
     type: ConfirmType | null;
     current: number;
     total: number;
+    errorCount: number;
     lastNames: string[];
-  }>({ active: false, type: null, current: 0, total: 0, lastNames: [] });
+  }>({ active: false, type: null, current: 0, total: 0, errorCount: 0, lastNames: [] });
+
+  // ID sản phẩm bị lỗi ở lần bulk action gần nhất - dùng để đánh dấu trực
+  // quan trên bảng (không chỉ dựa vào checkbox còn tích, vì admin dễ hiểu
+  // nhầm là "chọn nhầm" và bỏ chọn, mất luôn thông tin cần thử lại).
+  const [failedActionIds, setFailedActionIds] = useState<Set<string>>(new Set());
 
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
       const [pendingRes, approvedRes] = await Promise.all([
-        fetch(`${buildApiUrl(API_CONFIG.ENDPOINTS.GET_PRODUCTS)}?status=pending`),
+        fetch(`${buildApiUrl(API_CONFIG.ENDPOINTS.GET_PRODUCTS)}?status=pending`, { headers: adminAuthHeaders() }),
         fetch(`${buildApiUrl(API_CONFIG.ENDPOINTS.GET_PRODUCTS)}?status=approved`),
       ]);
+
+      if (pendingRes.status === 401) {
+        handleSessionExpired();
+        return;
+      }
 
       const pendingData = await pendingRes.json();
       const approvedData = await approvedRes.json();
@@ -197,9 +219,15 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
     try {
       const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.UPDATE_PRODUCT), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...adminAuthHeaders() },
         body: JSON.stringify(payload),
       });
+
+      if (response.status === 401) {
+        handleSessionExpired();
+        return;
+      }
+
       const result = await response.json();
 
       if (result.status === 'success') {
@@ -215,7 +243,10 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
   };
 
   const executeConfirmAction = async () => {
-    if (!confirmDialog.type) return;
+    if (!confirmDialog.type || selectedIds.length === 0) {
+      setConfirmDialog({ isOpen: false, type: null });
+      return;
+    }
     const type: ConfirmType = confirmDialog.type;
 
     let endpoint = '';
@@ -228,39 +259,89 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
     const total = selectedIds.length;
 
     setConfirmDialog({ isOpen: false, type: null });
-    setBulkProgress({ active: true, type, current: 0, total, lastNames: [] });
+    setFailedActionIds(new Set());
+    setBulkProgress({ active: true, type, current: 0, total, errorCount: 0, lastNames: [] });
 
+    // Xử lý HẾT danh sách đã chọn thay vì dừng ngay ở lỗi đầu tiên (trước đây
+    // `break` khi gặp lỗi khiến các sản phẩm xử lý trước đó đã thành công
+    // trên server nhưng UI không refresh, dễ khiến admin bấm lại và xử lý
+    // trùng/nhầm). Giờ luôn refetch cuối cùng và chỉ giữ lại lựa chọn của
+    // những sản phẩm THẤT BẠI để admin biết chính xác cần thử lại cái nào.
     try {
-      let hasError = false;
-      let errorMessage = '';
       let doneCount = 0;
+      let processedCount = 0;
+      let errorCount = 0;
+      const failedIds: string[] = [];
+      let sessionExpiredMidway = false;
 
       for (const id of selectedIds) {
-        const response = await fetch(buildApiUrl(endpoint), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id }),
-        });
+        if (sessionExpiredMidway) {
+          failedIds.push(id);
+          continue;
+        }
 
-        if (!response.ok) { hasError = true; errorMessage = `HTTP ${response.status}`; break; }
-        const result = await response.json();
-        if (result.status === 'error') { hasError = true; errorMessage = result.message; break; }
+        let succeeded = false;
+        try {
+          const response = await fetch(buildApiUrl(endpoint), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...adminAuthHeaders() },
+            body: JSON.stringify({ id }),
+          });
 
-        doneCount += 1;
+          if (response.status === 401) {
+            sessionExpiredMidway = true;
+            failedIds.push(id);
+          } else {
+            const result = await response.json();
+            if (!response.ok || result.status === 'error') {
+              failedIds.push(id);
+            } else {
+              succeeded = true;
+            }
+          }
+        } catch {
+          failedIds.push(id);
+        }
+
+        processedCount += 1;
+        if (succeeded) {
+          doneCount += 1;
+        } else if (!sessionExpiredMidway) {
+          errorCount += 1;
+        }
+
         const name = nameById.get(id) || id;
         setBulkProgress(prev => ({
           ...prev,
-          current: doneCount,
-          lastNames: [name, ...prev.lastNames].slice(0, 3),
+          current: processedCount,
+          errorCount,
+          lastNames: succeeded ? [name, ...prev.lastNames].slice(0, 3) : prev.lastNames,
         }));
       }
 
-      if (hasError) {
-        showError('Thao tác không thành công', errorMessage || 'Đã có lỗi xảy ra khi xử lý sản phẩm.');
+      setSelectedIds(failedIds);
+      setFailedActionIds(new Set(failedIds));
+      await fetchProducts();
+
+      // Nếu hết phiên giữa chừng, chỉ báo đúng 1 thông báo (phiên hết hạn)
+      // rồi điều hướng luôn - tránh chồng 2 toast (vừa "hoàn tất một phần"
+      // vừa "phiên hết hạn") ngay trước khi admin bị đá khỏi trang, khiến
+      // thông báo đầu trở nên vô nghĩa vì không kịp đọc/thao tác tiếp.
+      if (sessionExpiredMidway) {
+        handleSessionExpired();
+        return;
+      }
+
+      const actionLabel = type === 'approve' ? 'duyệt' : type === 'hide' ? 'ẩn' : 'xóa';
+      if (failedIds.length === 0) {
+        showSuccess('Hoàn tất', `Đã ${actionLabel} thành công ${total} sản phẩm.`);
+      } else if (doneCount > 0) {
+        showError(
+          'Hoàn tất một phần',
+          `Đã ${actionLabel} thành công ${doneCount}/${total} sản phẩm. ${failedIds.length} sản phẩm còn lại vẫn đang được chọn để bạn thử lại.`
+        );
       } else {
-        showSuccess('Hoàn tất', `${type === 'approve' ? `Đã duyệt thành công` : type === 'hide' ? `Đã ẩn thành công` : `Đã xóa thành công`} ${total} sản phẩm.`);
-        setSelectedIds([]);
-        fetchProducts();
+        showError('Thao tác không thành công', `Không thể ${actionLabel} sản phẩm nào trong số ${total} sản phẩm đã chọn.`);
       }
     } catch {
       showError('Lỗi kết nối', 'Đường truyền API bị lỗi. Vui lòng thử lại sau.');
@@ -291,6 +372,8 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
     selectedIds,
     setSelectedIds,
     toggleSelect,
+    handleSessionExpired,
+    failedActionIds,
     confirmDialog,
     setConfirmDialog,
     executeConfirmAction,

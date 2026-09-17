@@ -28,6 +28,8 @@ interface AdminProductTableProps {
   setConfirmDialog: React.Dispatch<React.SetStateAction<{ isOpen: boolean; type: 'approve' | 'delete' | 'hide' | null }>>;
   openEditModal: (product: Product) => void;
   toggleSelect: (id: string) => void;
+  onSessionExpired: () => void;
+  failedActionIds: Set<string>;
 }
 
 const FALLBACK_IMG = 'https://placehold.co/400x300/f8f9fa/a1a1aa?text=No+Image';
@@ -58,6 +60,8 @@ export default function AdminProductTable({
   setConfirmDialog,
   openEditModal,
   toggleSelect,
+  onSessionExpired,
+  failedActionIds,
 }: AdminProductTableProps) {
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,7 +90,7 @@ export default function AdminProductTable({
         </div>
 
         <div className="p-3 md:p-0 flex flex-col md:flex-row items-center gap-3 justify-end md:ml-4">
-          <FilteredCrawlModal onDone={fetchProducts} />
+          <FilteredCrawlModal onDone={fetchProducts} onSessionExpired={onSessionExpired} />
         </div>
       </div>
 
@@ -229,7 +233,18 @@ export default function AdminProductTable({
                             }} 
                           />
                         </td>
-                        <td className="p-4 font-medium text-gray-900 max-w-xs">{product.product_name} <br/><span className="text-xs font-normal text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full mt-1 inline-block">{product.product_type}</span></td>
+                        <td className="p-4 font-medium text-gray-900 max-w-xs">
+                          {product.product_name} <br/>
+                          <span className="text-xs font-normal text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full mt-1 inline-block">{product.product_type}</span>
+                          {failedActionIds.has(product.id) && (
+                            <span
+                              className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full mt-1 ml-1 inline-block"
+                              title="Thao tác hàng loạt gần nhất thất bại với sản phẩm này - đang được tích sẵn để bạn thử lại."
+                            >
+                              ⚠ Lỗi lần trước
+                            </span>
+                          )}
+                        </td>
                         <td className="p-4 text-sm text-gray-500 font-semibold">{product.created_at ? new Date(product.created_at).toLocaleString('vi-VN') : '---'}</td>
                         <td className="p-4 text-center">
                           <button onClick={() => openEditModal(product)} className="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded transition-colors">Sửa</button>
@@ -293,7 +308,17 @@ export default function AdminProductTable({
                             }} 
                           />
                         </td>
-                        <td className="p-4 font-medium text-gray-900 max-w-sm">{product.product_name}</td>
+                        <td className="p-4 font-medium text-gray-900 max-w-sm">
+                          {product.product_name}
+                          {failedActionIds.has(product.id) && (
+                            <span
+                              className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full ml-1.5 inline-block align-middle"
+                              title="Thao tác hàng loạt gần nhất thất bại với sản phẩm này - đang được tích sẵn để bạn thử lại."
+                            >
+                              ⚠ Lỗi lần trước
+                            </span>
+                          )}
+                        </td>
                         <td className="p-4 text-sm text-gray-600">{product.manufacturer}</td>
                         <td className="p-4 text-center"><span className="bg-emerald-100 text-emerald-700 font-bold px-3 py-1 rounded-full text-xs">Đang hiển thị</span></td>
                         <td className="p-4 text-center">

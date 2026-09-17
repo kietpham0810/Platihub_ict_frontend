@@ -82,7 +82,12 @@ export default function ProductDetail() {
         <div className="max-w-[1200px] mx-auto px-4 py-3 text-sm text-gray-500">
           <Link to="/" className="hover:text-[#f26522] transition-colors">Trang chủ</Link>
           <span className="mx-2">›</span>
-          <span className="hover:text-[#f26522] transition-colors cursor-pointer">{product.product_type}</span>
+          <Link
+            to={`/san-pham?category=${encodeURIComponent(product.product_type)}`}
+            className="hover:text-[#f26522] transition-colors"
+          >
+            {product.product_type}
+          </Link>
           <span className="mx-2">›</span>
           <span className="text-gray-800 font-medium truncate inline-block align-bottom max-w-[200px] sm:max-w-md">
             {product.product_name}
