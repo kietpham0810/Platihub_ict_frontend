@@ -20,6 +20,17 @@ interface AdminProductTableProps {
   pendingCategories: string[];
   categoryFilter: string;
   setCategoryFilter: React.Dispatch<React.SetStateAction<string>>;
+  manufacturerFilter: string;
+  setManufacturerFilter: React.Dispatch<React.SetStateAction<string>>;
+  manufacturerOptions: string[];
+  searchQuery: string;
+  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+  priceMin: string;
+  setPriceMin: React.Dispatch<React.SetStateAction<string>>;
+  priceMax: string;
+  setPriceMax: React.Dispatch<React.SetStateAction<string>>;
+  activeFilterCount: number;
+  clearFilters: () => void;
   setActiveTab: React.Dispatch<React.SetStateAction<'review' | 'manual' | 'manage'>>;
   setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
   setConfirmDialog: React.Dispatch<React.SetStateAction<{ isOpen: boolean; type: 'approve' | 'delete' | 'hide' | null }>>;
@@ -44,6 +55,17 @@ export default function AdminProductTable({
   pendingCategories,
   categoryFilter,
   setCategoryFilter,
+  manufacturerFilter,
+  setManufacturerFilter,
+  manufacturerOptions,
+  searchQuery,
+  setSearchQuery,
+  priceMin,
+  setPriceMin,
+  priceMax,
+  setPriceMax,
+  activeFilterCount,
+  clearFilters,
   setActiveTab,
   setSelectedIds,
   setConfirmDialog,
@@ -115,23 +137,91 @@ export default function AdminProductTable({
       </div>
 
       <div className="p-8">
+        {/* BỘ LỌC - dùng chung cho tab Chờ duyệt & Quản lý sản phẩm */}
+        {(activeTab === 'review' || activeTab === 'manage') && (
+          <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex-1 min-w-[180px]">
+                <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Tìm kiếm</label>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tên sản phẩm, chip, thông số..."
+                  className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="w-full sm:w-auto">
+                <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Loại sản phẩm</label>
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 w-full"
+                >
+                  {pendingCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat === 'All' ? 'Tất cả loại' : cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="w-full sm:w-auto">
+                <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Nhà sản xuất</label>
+                <select
+                  value={manufacturerFilter}
+                  onChange={(e) => setManufacturerFilter(e.target.value)}
+                  className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 w-full"
+                >
+                  {manufacturerOptions.map(m => (
+                    <option key={m} value={m}>{m === 'All' ? 'Tất cả NSX' : m}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-end gap-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Giá từ</label>
+                  <input
+                    type="number"
+                    value={priceMin}
+                    onChange={(e) => setPriceMin(e.target.value)}
+                    placeholder="0"
+                    min={0}
+                    className="w-28 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <span className="pb-2.5 text-gray-400">-</span>
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Giá đến</label>
+                  <input
+                    type="number"
+                    value={priceMax}
+                    onChange={(e) => setPriceMax(e.target.value)}
+                    placeholder="∞"
+                    min={0}
+                    className="w-28 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={clearFilters}
+                  className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors shrink-0"
+                >
+                  Xóa lọc ({activeFilterCount})
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* TAB 1: REVIEW */}
         {activeTab === 'review' && (
           <div>
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-4">
                 <h3 className="text-xl font-bold text-gray-800">Cần kiểm duyệt</h3>
-                {pendingCategories.length > 1 && (
-                  <select
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2"
-                  >
-                    {pendingCategories.map(cat => (
-                      <option key={cat} value={cat}>{cat === 'All' ? 'Tất cả loại' : cat}</option>
-                    ))}
-                  </select>
-                )}
               </div>
               {selectedIds.length > 0 && (
                 <div className="flex gap-3">
@@ -145,9 +235,9 @@ export default function AdminProductTable({
               <div className="text-center py-12 text-gray-500">Đang tải dữ liệu...</div>
             ) : pendingProducts.length === 0 ? (
               <div className="text-center py-12 text-gray-500 font-medium">
-                {categoryFilter === 'All'
+                {activeFilterCount === 0
                   ? 'Kho dữ liệu sạch sẽ. Không có sản phẩm nào đang chờ duyệt.'
-                  : `Không có sản phẩm nào khớp với bộ lọc đã chọn.`}
+                  : 'Không có sản phẩm nào khớp với bộ lọc đã chọn.'}
               </div>
             ) : (
               <div className="overflow-x-auto border border-gray-200 rounded-lg">
@@ -215,7 +305,11 @@ export default function AdminProductTable({
             {isLoading ? (
               <div className="text-center py-12 text-gray-500">Đang tải dữ liệu...</div>
             ) : approvedProducts.length === 0 ? (
-              <div className="text-center py-12 text-gray-500 font-medium">Chưa có sản phẩm nào được hiển thị trên Website.</div>
+              <div className="text-center py-12 text-gray-500 font-medium">
+                {activeFilterCount === 0
+                  ? 'Chưa có sản phẩm nào được hiển thị trên Website.'
+                  : 'Không có sản phẩm nào khớp với bộ lọc đã chọn.'}
+              </div>
             ) : (
               <div className="overflow-x-auto border border-gray-200 rounded-lg">
                 <table className="w-full text-left border-collapse">

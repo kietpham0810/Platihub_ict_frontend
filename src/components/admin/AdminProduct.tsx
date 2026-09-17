@@ -57,6 +57,17 @@ export default function AdminProduct() {
           pendingCategories={products.pendingCategories}
           categoryFilter={products.categoryFilter}
           setCategoryFilter={products.setCategoryFilter}
+          manufacturerFilter={products.manufacturerFilter}
+          setManufacturerFilter={products.setManufacturerFilter}
+          manufacturerOptions={products.manufacturerOptions}
+          searchQuery={products.searchQuery}
+          setSearchQuery={products.setSearchQuery}
+          priceMin={products.priceMin}
+          setPriceMin={products.setPriceMin}
+          priceMax={products.priceMax}
+          setPriceMax={products.setPriceMax}
+          activeFilterCount={products.activeFilterCount}
+          clearFilters={products.clearFilters}
           setActiveTab={setActiveTab}
           setSelectedIds={products.setSelectedIds}
           setConfirmDialog={products.setConfirmDialog}

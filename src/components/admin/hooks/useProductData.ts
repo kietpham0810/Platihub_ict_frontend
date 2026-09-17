@@ -31,6 +31,10 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
   const [editSpecs, setEditSpecs] = useState<SpecField[]>([]);
   
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
+  const [manufacturerFilter, setManufacturerFilter] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [priceMin, setPriceMin] = useState<string>('');
+  const [priceMax, setPriceMax] = useState<string>('');
 
   const [bulkProgress, setBulkProgress] = useState<{
     active: boolean;
@@ -70,16 +74,64 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
     return ['All', ...categoryValues];
   }, []);
 
-  const filteredPendingProducts = useMemo(() => {
-    if (categoryFilter === 'All') {
-      return pendingProducts;
-    }
-    return pendingProducts.filter(p => p.product_type === categoryFilter);
-  }, [pendingProducts, categoryFilter]);
-  
+  const manufacturerOptions = useMemo(() => {
+    const all = [...pendingProducts, ...approvedProducts]
+      .map(p => p.manufacturer)
+      .filter((m): m is string => !!m && m.trim() !== '');
+    return ['All', ...Array.from(new Set(all)).sort((a, b) => a.localeCompare(b))];
+  }, [pendingProducts, approvedProducts]);
+
+  const applyFilters = (list: Product[]) => {
+    const query = searchQuery.trim().toLowerCase();
+    const min = priceMin.trim() !== '' ? Number(priceMin) : null;
+    const max = priceMax.trim() !== '' ? Number(priceMax) : null;
+
+    return list.filter(p => {
+      if (categoryFilter !== 'All' && p.product_type !== categoryFilter) return false;
+      if (manufacturerFilter !== 'All' && p.manufacturer !== manufacturerFilter) return false;
+
+      if (query) {
+        const specsText = p.specifications ? String(p.specifications).toLowerCase() : '';
+        const haystack = `${p.product_name || ''} ${p.manufacturer || ''} ${specsText}`.toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+
+      if (min !== null && (!p.price || p.price < min)) return false;
+      if (max !== null && (!p.price || p.price > max)) return false;
+
+      return true;
+    });
+  };
+
+  const filteredPendingProducts = useMemo(
+    () => applyFilters(pendingProducts),
+    [pendingProducts, categoryFilter, manufacturerFilter, searchQuery, priceMin, priceMax]
+  );
+
+  const filteredApprovedProducts = useMemo(
+    () => applyFilters(approvedProducts),
+    [approvedProducts, categoryFilter, manufacturerFilter, searchQuery, priceMin, priceMax]
+  );
+
+  const activeFilterCount = [
+    categoryFilter !== 'All',
+    manufacturerFilter !== 'All',
+    searchQuery.trim() !== '',
+    priceMin.trim() !== '',
+    priceMax.trim() !== '',
+  ].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setCategoryFilter('All');
+    setManufacturerFilter('All');
+    setSearchQuery('');
+    setPriceMin('');
+    setPriceMax('');
+  };
+
   useEffect(() => {
     setSelectedIds([]);
-  }, [categoryFilter]);
+  }, [categoryFilter, manufacturerFilter, searchQuery, priceMin, priceMax]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev =>
@@ -222,7 +274,18 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
     pendingCategories,
     categoryFilter,
     setCategoryFilter,
-    approvedProducts,
+    manufacturerFilter,
+    setManufacturerFilter,
+    manufacturerOptions,
+    searchQuery,
+    setSearchQuery,
+    priceMin,
+    setPriceMin,
+    priceMax,
+    setPriceMax,
+    activeFilterCount,
+    clearFilters,
+    approvedProducts: filteredApprovedProducts,
     isLoading,
     fetchProducts,
     selectedIds,
