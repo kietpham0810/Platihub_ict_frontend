@@ -1,11 +1,6 @@
 import React from 'react';
-import type { Product, BotReport } from './types';
-
-interface AccumulatedReport {
-  added: number;
-  updated: number;
-  totalFound: number;
-}
+import type { Product } from './types';
+import FilteredCrawlModal from './modals/FilteredCrawlModal';
 
 interface AdminProductTableProps {
   activeTab: 'review' | 'manual' | 'manage';
@@ -13,10 +8,7 @@ interface AdminProductTableProps {
   approvedProducts: Product[];
   selectedIds: string[];
   isLoading: boolean;
-  botReport: BotReport | null;
-  accumulatedReport: AccumulatedReport;
-  isBotRunning: boolean;
-  crawlUrl: string;
+  fetchProducts: () => Promise<void>;
   pendingCategories: string[];
   categoryFilter: string;
   setCategoryFilter: React.Dispatch<React.SetStateAction<string>>;
@@ -35,9 +27,7 @@ interface AdminProductTableProps {
   setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
   setConfirmDialog: React.Dispatch<React.SetStateAction<{ isOpen: boolean; type: 'approve' | 'delete' | 'hide' | null }>>;
   openEditModal: (product: Product) => void;
-  handleRunBot: () => Promise<void>;
   toggleSelect: (id: string) => void;
-  setCrawlUrl: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const FALLBACK_IMG = 'https://placehold.co/400x300/f8f9fa/a1a1aa?text=No+Image';
@@ -48,10 +38,7 @@ export default function AdminProductTable({
   approvedProducts,
   selectedIds,
   isLoading,
-  botReport,
-  accumulatedReport,
-  isBotRunning,
-  crawlUrl,
+  fetchProducts,
   pendingCategories,
   categoryFilter,
   setCategoryFilter,
@@ -70,9 +57,7 @@ export default function AdminProductTable({
   setSelectedIds,
   setConfirmDialog,
   openEditModal,
-  handleRunBot,
   toggleSelect,
-  setCrawlUrl,
 }: AdminProductTableProps) {
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,38 +86,7 @@ export default function AdminProductTable({
         </div>
 
         <div className="p-3 md:p-0 flex flex-col md:flex-row items-center gap-3 justify-end md:ml-4">
-          <div className="w-full md:w-64">
-            <input
-              type="url"
-              placeholder="Dán link cần lấy dữ liệu sản phẩm vào đây..."
-              value={crawlUrl}
-              onChange={(e) => setCrawlUrl(e.target.value)}
-              className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-
-          {isBotRunning && accumulatedReport.totalFound > 0 && (
-            <div className="text-right hidden xl:block shrink-0 animate-pulse">
-              <p className="text-xs text-blue-600 font-bold">Tổng cộng: Thêm {accumulatedReport.added}, Cập nhật {accumulatedReport.updated}</p>
-              <p className="text-[11px] text-gray-500">Đang quét {accumulatedReport.totalFound} links...</p>
-            </div>
-          )}
-
-          {!isBotRunning && botReport && (
-            <div className="text-right hidden xl:block shrink-0">
-              <p className="text-[11px] text-green-600 font-bold">✨ Tìm thấy {botReport.total_links_found} mục</p>
-              <p className="text-[10px] text-gray-400">Lần cuối: Thêm {botReport.new_inserted} | Cập nhật: {botReport.updated_specifications}</p>
-            </div>
-          )}
-
-          <button
-            onClick={handleRunBot}
-            disabled={isBotRunning}
-            className={`shrink-0 px-4 py-2 rounded-lg font-bold text-xs md:text-sm shadow flex items-center gap-2 transition-all ${isBotRunning ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-700 to-indigo-700 text-white hover:from-blue-800'}`}
-          >
-            <span>{isBotRunning ? '⚙️' : '🤖'}</span>
-            {isBotRunning ? 'Đang Quét...' : 'Quét Link Này'}
-          </button>
+          <FilteredCrawlModal onDone={fetchProducts} />
         </div>
       </div>
 

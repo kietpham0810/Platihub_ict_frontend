@@ -4,11 +4,9 @@ import AdminProductManual from './AdminProductManual';
 import ConfirmDialog from './modals/ConfirmDialog';
 import BulkProgressToast from './modals/BulkProgressToast';
 import ResultDialog from './modals/ResultDialog';
-import BotContinueDialog from './modals/BotContinueDialog';
 import EditProductModal from './modals/EditProductModal';
 import { useDialogs } from './hooks/useDialogs';
 import { useProductData } from './hooks/useProductData';
-import { useProductBot } from './hooks/useProductBot';
 import { useProductForm } from './hooks/useProductForm';
 
 export type { Product, SpecField } from './types';
@@ -20,7 +18,6 @@ export default function AdminProduct() {
   const { showSuccess, showError, closeResult } = dialogs;
 
   const products = useProductData({ showSuccess, showError });
-  const bot = useProductBot({ fetchProducts: products.fetchProducts, dialogs });
   const form = useProductForm({ fetchProducts: products.fetchProducts, showSuccess, showError });
 
   const { setSelectedIds } = products;
@@ -28,17 +25,6 @@ export default function AdminProduct() {
     // This effect remains to clear selection when switching main tabs
     setSelectedIds([]);
   }, [activeTab, setSelectedIds]);
-
-  const handleBotStop = () => {
-    dialogs.setBotContinueDialog({ isOpen: false, nextOffset: 0, url: '', summary: '' });
-    bot.stopBot();
-  };
-
-  const handleBotContinue = () => {
-    const { nextOffset, url } = dialogs.botContinueDialog;
-    dialogs.setBotContinueDialog({ isOpen: false, nextOffset: 0, url: '', summary: '' });
-    bot.executeBotCrawl(url, nextOffset);
-  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
@@ -50,10 +36,7 @@ export default function AdminProduct() {
           approvedProducts={products.approvedProducts}
           selectedIds={products.selectedIds}
           isLoading={products.isLoading}
-          botReport={bot.botReport}
-          accumulatedReport={bot.accumulatedReport}
-          isBotRunning={bot.isBotRunning}
-          crawlUrl={bot.crawlUrl}
+          fetchProducts={products.fetchProducts}
           pendingCategories={products.pendingCategories}
           categoryFilter={products.categoryFilter}
           setCategoryFilter={products.setCategoryFilter}
@@ -72,9 +55,7 @@ export default function AdminProduct() {
           setSelectedIds={products.setSelectedIds}
           setConfirmDialog={products.setConfirmDialog}
           openEditModal={products.openEditModal}
-          handleRunBot={bot.handleRunBot}
           toggleSelect={products.toggleSelect}
-          setCrawlUrl={bot.setCrawlUrl}
         />
 
         <div className="p-8">
@@ -108,12 +89,6 @@ export default function AdminProduct() {
           current={products.bulkProgress.current}
           total={products.bulkProgress.total}
           lastNames={products.bulkProgress.lastNames}
-        />
-
-        <BotContinueDialog
-          dialog={dialogs.botContinueDialog}
-          onStop={handleBotStop}
-          onContinue={handleBotContinue}
         />
 
         <ResultDialog dialog={dialogs.resultDialog} onClose={closeResult} />

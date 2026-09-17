@@ -2,7 +2,6 @@ import { useState } from 'react';
 import type {
   ConfirmDialogState,
   ResultDialogState,
-  BotContinueDialogState,
 } from '../types';
 
 export function useDialogs() {
@@ -16,13 +15,6 @@ export function useDialogs() {
     type: 'success',
     title: '',
     message: '',
-  });
-
-  const [botContinueDialog, setBotContinueDialog] = useState<BotContinueDialogState>({
-    isOpen: false,
-    nextOffset: 0,
-    url: '',
-    summary: '',
   });
 
   const showSuccess = (title: string, message: string) =>
@@ -39,8 +31,6 @@ export function useDialogs() {
     setConfirmDialog,
     resultDialog,
     setResultDialog,
-    botContinueDialog,
-    setBotContinueDialog,
     showSuccess,
     showError,
     closeResult,

@@ -11,15 +11,6 @@ export interface Product {
   created_at?: string;
 }
 
-export interface BotReport {
-  total_links_found?: number;
-  total_links?: number;
-  new_inserted?: number;
-  updated_specifications?: number;
-  has_more?: boolean;
-  next_offset?: number;
-}
-
 export interface SpecField {
   key: string;
   value: string;
@@ -59,9 +50,24 @@ export interface ResultDialogState {
   message: string;
 }
 
-export interface BotContinueDialogState {
-  isOpen: boolean;
-  nextOffset: number;
-  url: string;
-  summary: string;
+// Cây danh mục cào theo bộ lọc (Danh mục lớn -> Nhóm -> Hãng -> Dòng con),
+// lấy từ configs.crawl_category_tree (xem cli/seed_crawl_categories.php ở
+// repo backend). Mỗi node có thể vừa có url (điểm dừng hợp lệ để cào) vừa có
+// children (đi sâu hơn).
+export interface CrawlCategoryNode {
+  label: string;
+  url?: string;
+  children?: CrawlCategoryNode[];
+}
+
+export type CrawlCategoryTree = Record<string, CrawlCategoryNode>;
+
+export interface FilteredCrawlResult {
+  scanned: number;
+  new_inserted: number;
+  updated_specifications: number;
+  excluded: number;
+  filtered_out: number;
+  total_links_in_category: number;
+  reached_target: boolean;
 }
