@@ -24,7 +24,7 @@ function HomePage() {
 
 export default function App() {
   return (
-    <Router basename="/Platihub/platihub-ict/dist">
+    <Router>
       <div className="font-sans text-gray-800 bg-gray-50 min-h-screen antialiased flex flex-col justify-between">
         <div>
           <Header />
