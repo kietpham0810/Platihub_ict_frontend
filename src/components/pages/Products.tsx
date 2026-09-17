@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { API_CONFIG, buildApiUrl } from '../../constants/config';
+import { API_CONFIG, PRODUCT_CATEGORY_OPTIONS, buildApiUrl } from '../../constants/config';
 
 interface Product {
   id: string;
@@ -13,18 +13,9 @@ interface Product {
   specifications?: string | Record<string, any> | null;
 }
 
-const PRODUCT_CATEGORIES = [
-  { label: 'PC', value: 'PC' },
-  { label: 'Laptop', value: 'Laptop' },
-  { label: 'CPU', value: 'CPU' },
-  { label: 'Mainboard', value: 'Mainboard' },
-  { label: 'VGA', value: 'VGA' },
-  { label: 'Linh kiện máy tính', value: 'Linh kiện' },
-  { label: 'Màn hình máy tính', value: 'Màn hình' },
-  { label: 'HDD-SSD', value: 'HDD-SSD' },
-  { label: 'Tản Nhiệt', value: 'Tản Nhiệt' },
-  { label: 'Tai nghe', value: 'Tai nghe' },
-].sort((a,b) => a.label.localeCompare(b.label));
+const PRODUCT_CATEGORIES = [...PRODUCT_CATEGORY_OPTIONS].sort((a, b) =>
+  a.label.localeCompare(b.label)
+);
 
 const ADVANCED_FILTER_CONFIG: Record<string, Record<string, string>> = {
   'PC': { 'Hãng sản xuất': 'manufacturer', 'Nhu cầu': 'Nhu cầu', 'CPU': 'CPU', 'RAM': 'RAM', 'Ổ cứng': 'Ổ cứng' },
@@ -43,6 +34,21 @@ const PRICE_RANGES = [
   { label: 'Từ 13 - 20 triệu', min: 13000000, max: 20000000 },
   { label: 'Trên 20 triệu', min: 20000000, max: Infinity },
 ];
+// Xóa bỏ dấu tiếng Việt để so sánh tìm kiếm chính xác (Search Không Dấu)
+const removeVietnameseTones = (str: string) => {
+  if (!str) return '';
+  let result = str.toLowerCase();
+  result = result.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
+  result = result.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
+  result = result.replace(/ì|í|ị|ỉ|ĩ/g, "i");
+  result = result.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o");
+  result = result.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u");
+  result = result.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y");
+  result = result.replace(/đ/g, "d");
+  // Xóa các ký tự đặc biệt, chỉ giữ lại chữ, số và khoảng trắng
+  result = result.replace(/[^a-z0-9 ]/g, ' '); 
+  return result;
+};
 
 const parseSpecs = (product: Product): Record<string, any> => {
   if (!product.specifications) return {};
@@ -60,7 +66,7 @@ export default function Products() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<Record<string, (string | number)[]>>({});
-
+  const [deadImageIds, setDeadImageIds] = useState<Set<string>>(new Set());
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
   const searchKeyword = searchParams.get('search');
@@ -139,17 +145,39 @@ export default function Products() {
 
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
+      // Chặn hiển thị nếu ID sản phẩm nằm trong danh sách ảnh chết
+      if (deadImageIds.has(product.id)) {
+        return false;
+      }
+
       if (currentCategory && product.product_type !== currentCategory) {
         return false;
       }
       if (searchKeyword) {
-        const lowerKeyword = searchKeyword.toLowerCase().trim();
-        const searchTerms = lowerKeyword.split(/\s+/).filter(Boolean);
-        const productText = [
-          product.product_name, product.manufacturer, product.product_type, product.description, JSON.stringify(product.specifications)
-        ].join(' ').toLowerCase();
-        if (!searchTerms.every(term => productText.includes(term))) return false;
-      }
+            // Xử lý từ khóa tìm kiếm: xóa dấu, cắt thành từng từ
+            const normalizedKeyword = removeVietnameseTones(searchKeyword).trim();
+            const searchTerms = normalizedKeyword.split(/\s+/).filter(Boolean);
+
+            // BÓC TÁCH SPECS: CHỈ lấy Values, tuyệt đối KHÔNG lấy Keys (Fix Bug gõ VGA ra Laptop)
+            const specs = parseSpecs(product);
+            const specValues = Object.values(specs).join(' ');
+
+            // Gom các trường dữ liệu lại thành 1 chuỗi để quét
+            const rawText = [
+              product.product_name, 
+              product.manufacturer, 
+              product.product_type, 
+              specValues 
+            ].join(' ');
+
+            // Chuyển chuỗi tổng của sản phẩm về dạng không dấu
+            const productText = removeVietnameseTones(rawText);
+
+            // Phải khớp TẤT CẢ các từ khóa người dùng nhập vào
+            if (!searchTerms.every(term => productText.includes(term))) {
+              return false;
+            }
+          }
 
       const specs = parseSpecs(product);
       for (const filterLabel in activeFilters) {
@@ -174,7 +202,7 @@ export default function Products() {
 
       return true;
     });
-  }, [products, currentCategory, searchKeyword, activeFilters, filterableSpecs]);
+  }, [products, currentCategory, searchKeyword, activeFilters, filterableSpecs, deadImageIds]);
 
   const toggleFilter = (label: string, value: string | number) => {
     setActiveFilters(prev => {
@@ -234,7 +262,15 @@ export default function Products() {
               return (
                 <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group">
                   <div className="relative aspect-square p-4 flex items-center justify-center bg-white border-b border-gray-50">
-                    <img src={product.image_url} alt={product.product_name} className="max-h-full object-contain group-hover:scale-105 transition-transform duration-500" onError={(e) => { const t = e.target as HTMLImageElement; t.onerror = null; t.src='https://placehold.co/400x300/f8f9fa/a1a1aa?text=No+Image'}} />
+                    <img 
+                      src={product.image_url} 
+                      alt={product.product_name} 
+                      className="max-h-full object-contain group-hover:scale-105 transition-transform duration-500" 
+                      onError={() => {
+                        // Ngay khi ảnh 404, ném ID sản phẩm vào danh sách đen để giấu đi
+                        setDeadImageIds(prev => new Set(prev).add(product.id));
+                      }} 
+                    />
                   </div>
                   <div className="p-4 flex flex-col flex-grow">
                     <h3 className="text-sm font-bold text-gray-900 mb-2 line-clamp-2 h-10 group-hover:text-blue-600 transition-colors">{product.product_name}</h3>

@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import MegaMenu from './MegaMenu';
+import PullLampLogin from './PullLampLogin';
 import logo from '../../assets/images/logo.jpg';
 // BƯỚC 1: IMPORT CONFIG API
-import { API_CONFIG, buildApiUrl } from '../../constants/config';
+import { ADMIN_AUTH, ADMIN_SESSION_KEY, API_CONFIG, buildApiUrl } from '../../constants/config';
 
 interface SearchResult {
   id: string;
@@ -36,7 +37,8 @@ export default function Header() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'platihubict' && password === 'platihub2026') {
+    if (username === ADMIN_AUTH.USERNAME && password === ADMIN_AUTH.PASSWORD) {
+      sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
       setIsLoginOpen(false);
       setUsername('');
       setPassword('');
@@ -290,35 +292,17 @@ export default function Header() {
 
       <MegaMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
 
-      {/* POPUP LOGIN */}
-      <div className={`fixed inset-0 z-[100] flex items-end sm:items-center justify-center transition-all duration-300 ${isLoginOpen ? 'visible opacity-100' : 'invisible opacity-0'}`}>
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setIsLoginOpen(false)}></div>
-        <div className={`relative bg-white w-full max-w-md p-8 rounded-t-3xl sm:rounded-2xl shadow-2xl transform transition-transform duration-500 ease-out ${isLoginOpen ? 'translate-y-0' : 'translate-y-full'}`}>
-          <button onClick={() => setIsLoginOpen(false)} className="absolute top-5 right-5 text-gray-400 hover:text-gray-800 transition-colors">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-              <svg className="w-8 h-8 text-[#f26522]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-            </div>
-            <h2 className="text-2xl font-black text-gray-900 tracking-tight">QUẢN TRỊ VIÊN</h2>
-          </div>
-          {loginError && <div className="mb-5 bg-red-50 text-red-600 text-sm font-medium px-4 py-3 rounded-lg border border-red-100 text-center animate-pulse">{loginError}</div>}
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Tên đăng nhập</label>
-              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f26522]" placeholder="Tài khoản" required />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Mật khẩu</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f26522]" placeholder="Password" required />
-            </div>
-            <button type="submit" className="w-full bg-[#16223f] hover:bg-[#1f2f54] text-white font-bold py-4 rounded-lg shadow-lg transition-colors mt-4 uppercase tracking-widest text-lg flex justify-center items-center gap-2">
-              Vào Hệ Thống
-            </button>
-          </form>
-        </div>
-      </div>
+      {/* POPUP LOGIN - kéo dây đèn để đăng nhập */}
+      <PullLampLogin
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        username={username}
+        password={password}
+        setUsername={setUsername}
+        setPassword={setPassword}
+        loginError={loginError}
+        onSubmit={handleLogin}
+      />
     </header>
   );
 }

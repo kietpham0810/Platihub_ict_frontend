@@ -29,6 +29,8 @@ interface AdminProductTableProps {
   setCrawlUrl: React.Dispatch<React.SetStateAction<string>>;
 }
 
+const FALLBACK_IMG = 'https://placehold.co/400x300/f8f9fa/a1a1aa?text=No+Image';
+
 export default function AdminProductTable({
   activeTab,
   pendingProducts,
@@ -173,13 +175,13 @@ export default function AdminProductTable({
                         <td className="p-4"><input type="checkbox" className="w-5 h-5 accent-blue-600 cursor-pointer" checked={selectedIds.includes(product.id)} onChange={() => toggleSelect(product.id)} /></td>
                         <td className="p-4">
                           <img 
-                            src={product.image_url} 
+                            src={product.image_url || FALLBACK_IMG} 
                             alt={product.product_name}
                             className="w-16 h-16 object-cover rounded border bg-white" 
                             onError={(e) => { 
                               const target = e.target as HTMLImageElement; 
                               target.onerror = null; 
-                              target.src = 'https://placehold.co/400x300/f8f9fa/a1a1aa?text=No+Image'; 
+                              target.src = FALLBACK_IMG; 
                             }} 
                           />
                         </td>
@@ -233,13 +235,13 @@ export default function AdminProductTable({
                         <td className="p-4"><input type="checkbox" className="w-5 h-5 accent-emerald-600 cursor-pointer" checked={selectedIds.includes(product.id)} onChange={() => toggleSelect(product.id)} /></td>
                         <td className="p-4">
                           <img 
-                            src={product.image_url} 
+                            src={product.image_url || FALLBACK_IMG} 
                             alt={product.product_name}
                             className="w-16 h-16 object-cover rounded border bg-white" 
                             onError={(e) => { 
                               const target = e.target as HTMLImageElement; 
                               target.onerror = null; 
-                              target.src = 'https://placehold.co/400x300/f8f9fa/a1a1aa?text=No+Image'; 
+                              target.src = FALLBACK_IMG; 
                             }} 
                           />
                         </td>

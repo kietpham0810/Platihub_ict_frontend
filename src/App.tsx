@@ -7,6 +7,7 @@ import Footer from './components/layout/Footer';
 import Promotion from './components/sections/Promotion';
 import Contact from './components/sections/Contact';
 import AdminProduct from './components/admin/AdminProduct';
+import RequireAdminAuth from './components/admin/RequireAdminAuth';
 import Products from './components/pages/Products';
 // Thêm Import cho trang Chi tiết sản phẩm
 import ProductDetail from './components/pages/ProductDetail'; 
@@ -23,7 +24,7 @@ function HomePage() {
 
 export default function App() {
   return (
-    <Router>
+    <Router basename="/Platihub/platihub-ict/dist">
       <div className="font-sans text-gray-800 bg-gray-50 min-h-screen antialiased flex flex-col justify-between">
         <div>
           <Header />
@@ -39,7 +40,14 @@ export default function App() {
               {/* Route bóc tách tham số ID từ URL */}
               <Route path="/product/:id" element={<ProductDetail />} />
               
-              <Route path="/admin" element={<AdminProduct />} />
+              <Route
+                path="/admin"
+                element={
+                  <RequireAdminAuth>
+                    <AdminProduct />
+                  </RequireAdminAuth>
+                }
+              />
             </Routes>
           </main>
         </div>

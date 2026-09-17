@@ -21,6 +21,26 @@ export const SITE_CONFIG = {
 } as const;
 
 // ==========================================
+// 1b. DANH MỤC SẢN PHẨM (NGUỒN DUY NHẤT)
+// ==========================================
+// Dùng chung cho: form admin, bộ lọc trang sản phẩm, danh sách chờ duyệt.
+// Trước đây danh sách này bị lặp lại ở 3 nơi với casing lệch nhau
+// (vd "MainBoard" vs "Mainboard", "Tản nhiệt" vs "Tản Nhiệt") khiến lọc
+// theo category bị sai. Mọi nơi cần danh mục PHẢI import từ đây.
+export const PRODUCT_CATEGORY_OPTIONS: { label: string; value: string }[] = [
+  { label: 'PC', value: 'PC' },
+  { label: 'Laptop', value: 'Laptop' },
+  { label: 'CPU', value: 'CPU' },
+  { label: 'Mainboard', value: 'Mainboard' },
+  { label: 'VGA', value: 'VGA' },
+  { label: 'Linh kiện máy tính', value: 'Linh kiện' },
+  { label: 'Màn hình máy tính', value: 'Màn hình' },
+  { label: 'HDD-SSD', value: 'HDD-SSD' },
+  { label: 'Tản Nhiệt', value: 'Tản Nhiệt' },
+  { label: 'Tai nghe', value: 'Tai nghe' },
+];
+
+// ==========================================
 // 2. CẤU HÌNH HỆ THỐNG API (API CONSTANTS)
 // ==========================================
 
@@ -61,6 +81,20 @@ export const API_CONFIG = {
  * Hàm Helper tạo Full URL chuẩn xác.
  * Tự động xử lý triệt để lỗi double slash (//) nếu BASE_URL hoặc ENDPOINT bị dư dấu '/'.
  */
+// ==========================================
+// 3. CẤU HÌNH ĐĂNG NHẬP ADMIN (TẠM THỜI - PHÍA FRONTEND)
+// ==========================================
+// LƯU Ý BẢO MẬT: Đây chỉ là lớp chặn UI tạm thời. Vì thông tin đăng nhập
+// vẫn nằm trong bundle JS gửi tới trình duyệt nên KHÔNG an toàn cho môi
+// trường thật. Cần chuyển sang xác thực phía backend (JWT/session) sớm
+// nhất có thể - xem bug.txt mục Bảo mật #1, #2.
+export const ADMIN_AUTH = {
+  USERNAME: import.meta.env.VITE_ADMIN_USERNAME || '',
+  PASSWORD: import.meta.env.VITE_ADMIN_PASSWORD || '',
+} as const;
+
+export const ADMIN_SESSION_KEY = 'platihub_admin_session';
+
 export const buildApiUrl = (endpoint: string): string => {
     if (!endpoint) return API_CONFIG.BASE_URL;
     

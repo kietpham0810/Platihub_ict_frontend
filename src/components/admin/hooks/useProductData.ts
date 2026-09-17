@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { API_CONFIG, buildApiUrl } from '../../../constants/config';
+import { API_CONFIG, PRODUCT_CATEGORY_OPTIONS, buildApiUrl } from '../../../constants/config';
 import {
   EMPTY_FORM_DATA,
   type Product,
@@ -32,6 +32,14 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
   
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
 
+  const [bulkProgress, setBulkProgress] = useState<{
+    active: boolean;
+    type: ConfirmType | null;
+    current: number;
+    total: number;
+    lastNames: string[];
+  }>({ active: false, type: null, current: 0, total: 0, lastNames: [] });
+
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
@@ -58,11 +66,8 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
   }, []);
 
   const pendingCategories = useMemo(() => {
-    const fixedCategories = [
-      'PC', 'Laptop', 'CPU', 'MainBoard', 'VGA', 'Linh kiện máy tính', 
-      'Màn hình máy tính', 'HDD-SSD', 'Tản nhiệt', 'Tai nghe'
-    ];
-    return ['All', ...fixedCategories.sort()];
+    const categoryValues = PRODUCT_CATEGORY_OPTIONS.map(c => c.value).sort();
+    return ['All', ...categoryValues];
   }, []);
 
   const filteredPendingProducts = useMemo(() => {
@@ -166,9 +171,17 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
     else if (type === 'delete') endpoint = API_CONFIG.ENDPOINTS.DELETE_PRODUCT;
     else if (type === 'hide') endpoint = API_CONFIG.ENDPOINTS.HIDE_PRODUCT;
 
+    const allProducts = [...pendingProducts, ...approvedProducts];
+    const nameById = new Map(allProducts.map(p => [p.id, p.product_name]));
+    const total = selectedIds.length;
+
+    setConfirmDialog({ isOpen: false, type: null });
+    setBulkProgress({ active: true, type, current: 0, total, lastNames: [] });
+
     try {
       let hasError = false;
       let errorMessage = '';
+      let doneCount = 0;
 
       for (const id of selectedIds) {
         const response = await fetch(buildApiUrl(endpoint), {
@@ -180,19 +193,27 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
         if (!response.ok) { hasError = true; errorMessage = `HTTP ${response.status}`; break; }
         const result = await response.json();
         if (result.status === 'error') { hasError = true; errorMessage = result.message; break; }
+
+        doneCount += 1;
+        const name = nameById.get(id) || id;
+        setBulkProgress(prev => ({
+          ...prev,
+          current: doneCount,
+          lastNames: [name, ...prev.lastNames].slice(0, 3),
+        }));
       }
 
       if (hasError) {
         showError('Thao tác không thành công', errorMessage || 'Đã có lỗi xảy ra khi xử lý sản phẩm.');
       } else {
-        showSuccess('Hoàn tất', `${type === 'approve' ? `Đã duyệt thành công` : type === 'hide' ? `Đã ẩn thành công` : `Đã xóa thành công`} ${selectedIds.length} sản phẩm.`);
+        showSuccess('Hoàn tất', `${type === 'approve' ? `Đã duyệt thành công` : type === 'hide' ? `Đã ẩn thành công` : `Đã xóa thành công`} ${total} sản phẩm.`);
         setSelectedIds([]);
         fetchProducts();
       }
     } catch {
       showError('Lỗi kết nối', 'Đường truyền API bị lỗi. Vui lòng thử lại sau.');
     } finally {
-      setConfirmDialog({ isOpen: false, type: null });
+      setBulkProgress(prev => ({ ...prev, active: false }));
     }
   };
 
@@ -210,6 +231,7 @@ export function useProductData({ showSuccess, showError }: DialogHelpers) {
     confirmDialog,
     setConfirmDialog,
     executeConfirmAction,
+    bulkProgress,
     isUpdateModalOpen,
     editingProduct,
     editFormData,

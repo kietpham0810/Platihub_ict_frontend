@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import AdminProductTable from './AdminProductTable';
 import AdminProductManual from './AdminProductManual';
 import ConfirmDialog from './modals/ConfirmDialog';
+import BulkProgressToast from './modals/BulkProgressToast';
 import ResultDialog from './modals/ResultDialog';
 import BotContinueDialog from './modals/BotContinueDialog';
 import EditProductModal from './modals/EditProductModal';
@@ -88,6 +89,14 @@ export default function AdminProduct() {
           selectedCount={products.selectedIds.length}
           onCancel={() => products.setConfirmDialog({ isOpen: false, type: null })}
           onConfirm={products.executeConfirmAction}
+        />
+
+        <BulkProgressToast
+          active={products.bulkProgress.active}
+          type={products.bulkProgress.type}
+          current={products.bulkProgress.current}
+          total={products.bulkProgress.total}
+          lastNames={products.bulkProgress.lastNames}
         />
 
         <BotContinueDialog

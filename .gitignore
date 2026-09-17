@@ -12,6 +12,15 @@ dist
 dist-ssr
 *.local
 
+# Environment variables (chứa URL API / cấu hình nhạy cảm)
+.env
+.env.*
+!.env.example
+
+# Ghi chú nội bộ / ảnh chụp màn hình tham khảo - không public
+bug.txt
+imageclaude/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

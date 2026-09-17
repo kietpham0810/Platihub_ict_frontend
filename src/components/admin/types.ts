@@ -41,18 +41,9 @@ export const EMPTY_FORM_DATA: ProductFormData = {
   description: '',
 };
 
-// Danh mục sản phẩm dùng chung cho form admin, đồng bộ với bộ lọc ở trang sản phẩm
-export const PRODUCT_CATEGORY_OPTIONS: { label: string; value: string }[] = [
-  { label: 'PC', value: 'PC' },
-  { label: 'Laptop', value: 'Laptop' },
-  { label: 'CPU', value: 'CPU' },
-  { label: 'Mainboard', value: 'Mainboard' },
-  { label: 'VGA', value: 'VGA' },
-  { label: 'Linh kiện máy tính', value: 'Linh kiện' },
-  { label: 'Màn hình máy tính', value: 'Màn hình' },
-  { label: 'HDD-SSD', value: 'HDD-SSD' },
-  { label: 'Tản Nhiệt', value: 'Tản Nhiệt' },
-];
+// Danh mục sản phẩm: nguồn duy nhất nằm ở constants/config.ts, re-export
+// tại đây để không phá vỡ các import cũ trỏ tới './types'.
+export { PRODUCT_CATEGORY_OPTIONS } from '../../constants/config';
 
 export type ConfirmType = 'approve' | 'delete' | 'hide';
 
